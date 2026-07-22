@@ -22,11 +22,6 @@
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .bot-info span { font-size: 12px; color: #888; display: block; }
         .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
-
-        /* Форми додавання */
-        .input-group { display: flex; gap: 8px; margin-top: 10px; }
-        .input-group input { flex: 1; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 6px; }
-        .input-group button { background: #00ffcc; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -35,11 +30,7 @@
     <div class="section">
         <div class="section-header">
             <h3>Біржі</h3>
-            <button class="add-btn" onclick="toggleExchangeInput()">+</button>
-        </div>
-        <div id="exchangeInputBox" class="input-group hidden">
-            <input type="text" id="exchangeName" placeholder="Назва біржі (напр. Binance)">
-            <button onclick="addExchange()">Додати</button>
+            <button class="add-btn" onclick="addExchangePrompt()">+</button>
         </div>
         <div class="exchange-list" id="exchangeList">
             </div>
@@ -48,11 +39,7 @@
     <div class="section">
         <div class="section-header">
             <h3>Боти <span id="selectedExchangeTitle"></span></h3>
-            <button id="botAddBtn" class="add-btn hidden" onclick="toggleBotInput()">+</button>
-        </div>
-        <div id="botInputBox" class="input-group hidden">
-            <input type="text" id="botName" placeholder="Назва бота (напр. Scalper)">
-            <button onclick="addBot()">Створити</button>
+            <button id="botAddBtn" class="add-btn hidden" onclick="addBotPrompt()">+</button>
         </div>
         <div id="botList">
             <div class="empty-text">Оберіть біржу вище</div>
@@ -83,7 +70,6 @@
             selectedExchange = ex;
             document.getElementById('selectedExchangeTitle').textContent = `(${ex})`;
             document.getElementById('botAddBtn').classList.remove('hidden');
-            document.getElementById('exchangeInputBox').classList.add('hidden');
             renderExchanges();
             renderBots();
         }
@@ -116,41 +102,30 @@
             });
         }
 
-        function toggleExchangeInput() {
-            const box = document.getElementById('exchangeInputBox');
-            box.classList.toggle('hidden');
-        }
-
-        function addExchange() {
-            const input = document.getElementById('exchangeName');
-            const name = input.value.trim();
-            if (name && !exchanges.includes(name)) {
-                exchanges.push(name);
-                bots[name] = [];
-                input.value = '';
-                toggleExchangeInput();
-                selectExchange(name);
+        function addExchangePrompt() {
+            const name = prompt('Введіть назву біржі:');
+            if (name) {
+                const trimmed = name.trim();
+                if (trimmed && !exchanges.includes(trimmed)) {
+                    exchanges.push(trimmed);
+                    bots[trimmed] = [];
+                    selectExchange(trimmed);
+                }
             }
         }
 
-        function toggleBotInput() {
-            const box = document.getElementById('botInputBox');
-            box.classList.toggle('hidden');
-        }
-
-        function addBot() {
-            const input = document.getElementById('botName');
-            const name = input.value.trim();
+        function addBotPrompt() {
+            const name = prompt('Введіть назву бота:');
             if (name && selectedExchange) {
-                if (!bots[selectedExchange]) bots[selectedExchange] = [];
-                bots[selectedExchange].push({name: name, status: 'Зупинено'});
-                input.value = '';
-                toggleBotInput();
-                renderBots();
+                const trimmed = name.trim();
+                if (trimmed) {
+                    if (!bots[selectedExchange]) bots[selectedExchange] = [];
+                    bots[selectedExchange].push({name: trimmed, status: 'Зупинено'});
+                    renderBots();
+                }
             }
         }
 
-        // Ініціалізація при завантаженні
         renderExchanges();
     </script>
 </body>
