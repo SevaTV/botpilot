@@ -74,15 +74,15 @@
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
-            <h3>Конкретна пара API</h3>
+            <h3>Повний шлях до API пар</h3>
             <div class="form-group">
-                <label>Повний URL до пари</label>
-                <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/BTC_USDT">
+                <label>Повний URL запиту</label>
+                <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT">
             </div>
-            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Вкажіть посилання на контракт. Запит піде через безпечний проксі.</p>
+            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Введіть повну адресу для отримання ціни контракту.</p>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
-                <button class="btn-save" onclick="fetchPairPrice()">Отримати ціну</button>
+                <button class="btn-save" onclick="fetchPairPrice()">Оновити</button>
             </div>
         </div>
     </div>
@@ -141,7 +141,7 @@
         let bots = JSON.parse(localStorage.getItem('bp_bots')) || {};
         let activeEx = null;
         let lastPriceValue = localStorage.getItem('bp_last_price') || "--";
-        let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts/BTC_USDT";
+        let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT";
         let editExIdx = null;
         let editBotIdx = null;
 
@@ -276,7 +276,7 @@
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.add('hidden');
+            document.getElementById('botDelBtn').classList.remove('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
