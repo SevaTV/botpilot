@@ -15,14 +15,28 @@
         
         /* Список бірж */
         .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
+        .settings-icon { font-size: 12px; opacity: 0.6; }
 
         /* Список ботів */
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .bot-info span { font-size: 12px; color: #888; display: block; }
         .bot-exchange-tag { font-size: 11px; background: #333; color: #00ffcc; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
         .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
+
+        /* Модальне вікно */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; }
+        .modal-content h3 { margin-top: 0; color: #00ffcc; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .form-group input, .form-group select { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-save { background: #00ffcc; color: #000; }
+        .btn-cancel { background: #333; color: #fff; }
+        .btn-delete { background: #ff5555; color: #fff; }
     </style>
 </head>
 <body>
@@ -31,7 +45,7 @@
     <div class="section">
         <div class="section-header">
             <h3>Біржі</h3>
-            <button class="add-btn" onclick="addExchangePrompt()">+</button>
+            <button class="add-btn" onclick="openExchangeModal()">+</button>
         </div>
         <div class="exchange-list" id="exchangeList">
             </div>
@@ -46,34 +60,76 @@
             </div>
     </div>
 
+    <div id="exchangeModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="modalTitle">Додати біржу</h3>
+            <div class="form-group">
+                <label>Назва біржі</label>
+                <input type="text" id="exNameInput" placeholder="Наприклад: Binance">
+            </div>
+            <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="exApiKey" placeholder="Введіть API ключ">
+            </div>
+            <div class="form-group">
+                <label>Secret Key</label>
+                <input type="password" id="exSecretKey" placeholder="Введіть секретний ключ">
+            </div>
+            <div class="form-group">
+                <label>Режим роботи</label>
+                <select id="exMode">
+                    <option value="spot">Спотова торгівля</option>
+                    <option value="futures">Ф'ючерси</option>
+                    <option value="testnet">Testnet (Тестовий)</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeExchangeModal()">Скасувати</button>
+                <button id="deleteExBtn" class="btn-delete hidden" onclick="deleteExchange()">Видалити</button>
+                <button class="btn-save" onclick="saveExchange()">Зберегти</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let exchanges = ['Binance', 'Bybit'];
-        let selectedExchange = null;
-        let bots = {
+        let exchanges = JSON.parse(localStorage.getItem('botpilot_exchanges')) || [
+            { name: 'Binance', apiKey: '', secretKey: '', mode: 'spot' },
+            { name: 'Bybit', apiKey: '', secretKey: '', mode: 'futures' }
+        ];
+        
+        let bots = JSON.parse(localStorage.getItem('botpilot_bots')) || {
             'Binance': [{name: 'Grid Bot #1', status: 'Працює'}],
             'Bybit': [{name: 'DCA Bot #1', status: 'Зупинено'}]
         };
+
+        let selectedExchange = null;
+        let editingExchangeName = null;
+
+        function saveData() {
+            localStorage.setItem('botpilot_exchanges', JSON.stringify(exchanges));
+            localStorage.setItem('botpilot_bots', JSON.stringify(bots));
+        }
 
         function renderExchanges() {
             const list = document.getElementById('exchangeList');
             list.innerHTML = '';
             exchanges.forEach(ex => {
                 const chip = document.createElement('div');
-                chip.className = `exchange-chip ${selectedExchange === ex ? 'active' : ''}`;
-                chip.textContent = ex;
-                chip.onclick = () => toggleExchangeSelection(ex);
+                chip.className = `exchange-chip ${selectedExchange === ex.name ? 'active' : ''}`;
+                chip.innerHTML = `<span>${ex.name}</span> <span class="settings-icon" onclick="event.stopPropagation(); editExchange('${ex.name}')">⚙️</span>`;
+                chip.onclick = () => toggleExchangeSelection(ex.name);
                 list.appendChild(chip);
             });
         }
 
-        function toggleExchangeSelection(ex) {
-            if (selectedExchange === ex) {
+        function toggleExchangeSelection(exName) {
+            if (selectedExchange === exName) {
                 selectedExchange = null;
                 document.getElementById('selectedExchangeTitle').textContent = '';
                 document.getElementById('botAddBtn').classList.add('hidden');
             } else {
-                selectedExchange = ex;
-                document.getElementById('selectedExchangeTitle').textContent = `(${ex})`;
+                selectedExchange = exName;
+                document.getElementById('selectedExchangeTitle').textContent = `(${exName})`;
                 document.getElementById('botAddBtn').classList.remove('hidden');
             }
             renderExchanges();
@@ -90,7 +146,7 @@
                 targetBots = (bots[selectedExchange] || []).map(b => ({...b, exchange: selectedExchange}));
             } else {
                 for (let ex in bots) {
-                    bots[ex].forEach(b => {
+                    (bots[ex] || []).forEach(b => {
                         targetBots.push({...b, exchange: ex});
                     });
                 }
@@ -115,15 +171,82 @@
             });
         }
 
-        function addExchangePrompt() {
-            const name = prompt('Введіть назву біржі:');
-            if (name) {
-                const trimmed = name.trim();
-                if (trimmed && !exchanges.includes(trimmed)) {
-                    exchanges.push(trimmed);
-                    bots[trimmed] = [];
-                    toggleExchangeSelection(trimmed);
+        function openExchangeModal() {
+            editingExchangeName = null;
+            document.getElementById('modalTitle').textContent = 'Додати біржу';
+            document.getElementById('exNameInput').value = '';
+            document.getElementById('exNameInput').disabled = false;
+            document.getElementById('exApiKey').value = '';
+            document.getElementById('exSecretKey').value = '';
+            document.getElementById('exMode').value = 'spot';
+            document.getElementById('deleteExBtn').classList.add('hidden');
+            document.getElementById('exchangeModal').classList.remove('hidden');
+        }
+
+        function editExchange(exName) {
+            editingExchangeName = exName;
+            const exData = exchanges.find(e => e.name === exName);
+            if (!exData) return;
+
+            document.getElementById('modalTitle').textContent = 'Налаштування біржі';
+            document.getElementById('exNameInput').value = exData.name;
+            document.getElementById('exNameInput').disabled = true; // Назву не міняємо для простоти ключів
+            document.getElementById('exApiKey').value = exData.apiKey || '';
+            document.getElementById('exSecretKey').value = exData.secretKey || '';
+            document.getElementById('exMode').value = exData.mode || 'spot';
+            document.getElementById('deleteExBtn').classList.remove('hidden');
+            document.getElementById('exchangeModal').classList.remove('hidden');
+        }
+
+        function closeExchangeModal() {
+            document.getElementById('exchangeModal').classList.add('hidden');
+        }
+
+        function saveExchange() {
+            const name = document.getElementById('exNameInput').value.trim();
+            const apiKey = document.getElementById('exApiKey').value.trim();
+            const secretKey = document.getElementById('exSecretKey').value.trim();
+            const mode = document.getElementById('exMode').value;
+
+            if (!name) return alert('Введіть назву біржі');
+
+            if (editingExchangeName) {
+                // Редагування існуючої
+                let ex = exchanges.find(e => e.name === editingExchangeName);
+                if (ex) {
+                    ex.apiKey = apiKey;
+                    ex.secretKey = secretKey;
+                    ex.mode = mode;
                 }
+            } else {
+                // Додавання нової
+                if (exchanges.some(e => e.name === name)) {
+                    return alert('Така біржа вже існує');
+                }
+                exchanges.push({ name, apiKey, secretKey, mode });
+                if (!bots[name]) bots[name] = [];
+            }
+
+            saveData();
+            closeExchangeModal();
+            renderExchanges();
+            renderBots();
+        }
+
+        function deleteExchange() {
+            if (!editingExchangeName) return;
+            if (confirm(`Видалити біржу ${editingExchangeName} та всі її боти?`)) {
+                exchanges = exchanges.filter(e => e.name !== editingExchangeName);
+                delete bots[editingExchangeName];
+                if (selectedExchange === editingExchangeName) {
+                    selectedExchange = null;
+                    document.getElementById('selectedExchangeTitle').textContent = '';
+                    document.getElementById('botAddBtn').classList.add('hidden');
+                }
+                saveData();
+                closeExchangeModal();
+                renderExchanges();
+                renderBots();
             }
         }
 
@@ -134,6 +257,7 @@
                 if (trimmed) {
                     if (!bots[selectedExchange]) bots[selectedExchange] = [];
                     bots[selectedExchange].push({name: trimmed, status: 'Зупинено'});
+                    saveData();
                     renderBots();
                 }
             }
