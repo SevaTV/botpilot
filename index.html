@@ -10,14 +10,18 @@
         .section { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .section-header h3 { margin: 0; font-size: 16px; color: #ccc; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
         .add-btn { background: #00ffcc; color: #000; border: none; width: 30px; height: 30px; font-weight: bold; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
         .hidden { display: none; }
         
+        /* Випадаючий список пар та селекти в шапці */
+        .pair-select { background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; max-width: 140px; }
+
         /* Список бірж */
         .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
         .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
-        .settings-icon { font-size: 12px; opacity: 0.6; cursor: pointer; }
+        .settings-icon { font-size: 14px; opacity: 0.7; cursor: pointer; }
 
         /* Список ботів */
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -56,7 +60,13 @@
     <div class="section">
         <div class="section-header">
             <h3>Боти <span id="selectedExchangeTitle"></span></h3>
-            <button id="botAddBtn" class="add-btn hidden" onclick="openBotModal()">+</button>
+            <div class="header-right">
+                <select id="pairSelect" class="pair-select" onchange="changePair(this.value)">
+                    <option value="">Пара</option>
+                </select>
+                <span class="settings-icon" onclick="openBotParamsModal()" title="Налаштування пари/ф'ючерсу">⚙️</span>
+                <button id="botAddBtn" class="add-btn hidden" onclick="openBotModal()">+</button>
+            </div>
         </div>
         <div id="botList">
             </div>
@@ -67,11 +77,11 @@
             <h3 id="exchangeModalTitle">Додати біржу</h3>
             <div class="form-group">
                 <label>Назва біржі</label>
-                <input type="text" id="exNameInput" placeholder="Наприклад: Gate">
+                <input type="text" id="exNameInput" value="Gate" disabled>
             </div>
             <div class="form-group">
-                <label>Base URL API</label>
-                <input type="text" id="exApiUrl" placeholder="Наприклад: https://api.gateio.ws/api/v4">
+                <label>Base URL API (Futures)</label>
+                <input type="text" id="exApiUrl" value="https://api.gateio.ws/api/v4">
             </div>
             <div class="form-group">
                 <label>API Key</label>
@@ -84,9 +94,7 @@
             <div class="form-group">
                 <label>Режим роботи</label>
                 <select id="exMode">
-                    <option value="spot">Спотова торгівля</option>
-                    <option value="futures">Ф'ючерси</option>
-                    <option value="testnet">Testnet (Тестовий)</option>
+                    <option value="futures_usdt" selected>Ф'ючерси (USDT)</option>
                 </select>
             </div>
             <div class="modal-buttons">
@@ -97,12 +105,33 @@
         </div>
     </div>
 
+    <div id="botParamsModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Параметри ф'ючерса Gate</h3>
+            <div class="form-group">
+                <label>Розрахункова валюта (Settle)</label>
+                <select id="futuresSettle">
+                    <option value="usdt">USDT</option>
+                    <option value="btc">BTC</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Кредитне плечо (Leverage)</label>
+                <input type="number" id="futuresLeverage" value="10" placeholder="10">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeBotParamsModal()">Скасувати</button>
+                <button class="btn-save" onclick="saveBotParams()">Зберегти</button>
+            </div>
+        </div>
+    </div>
+
     <div id="botModal" class="modal hidden">
         <div class="modal-content">
             <h3 id="botModalTitle">Створити бота</h3>
             <div class="form-group">
                 <label>Назва бота</label>
-                <input type="text" id="botNameInput" placeholder="Наприклад: Grid Bot #1">
+                <input type="text" id="botNameInput" placeholder="Наприклад: Futures Bot #1">
             </div>
             <div class="form-group">
                 <label>Статус</label>
@@ -120,16 +149,28 @@
     </div>
 
     <script>
-        let exchanges = JSON.parse(localStorage.getItem('botpilot_exchanges')) || [];
-        let bots = JSON.parse(localStorage.getItem('botpilot_bots')) || {};
+        let exchanges = JSON.parse(localStorage.getItem('botpilot_exchanges')) || [
+            { name: 'Gate', apiUrl: 'https://api.gateio.ws/api/v4', apiKey: '', secretKey: '', mode: 'futures_usdt', settle: 'usdt', leverage: 10 }
+        ];
+        let bots = JSON.parse(localStorage.getItem('botpilot_bots')) || {
+            'Gate': [{ name: 'Gate Futures Grid', status: 'Працює', pair: 'BTC_USDT' }]
+        };
 
         let selectedExchange = null;
+        let selectedPair = localStorage.getItem('botpilot_selected_pair') || 'BTC_USDT';
         let editingExchangeName = null;
         let editingBotIndex = null;
+
+        // Попередній заповнений список ф'ючерсних контрактів Gate.io для демонстрації без харкоду в логіці
+        const demoContracts = {
+            'usdt': ['BTC_USDT', 'ETH_USDT', 'SOL_USDT', 'XRP_USDT', 'DOGE_USDT'],
+            'btc': ['ETH_BTC', 'SOL_BTC']
+        };
 
         function saveData() {
             localStorage.setItem('botpilot_exchanges', JSON.stringify(exchanges));
             localStorage.setItem('botpilot_bots', JSON.stringify(bots));
+            localStorage.setItem('botpilot_selected_pair', selectedPair);
         }
 
         function renderExchanges() {
@@ -161,7 +202,47 @@
                 document.getElementById('botAddBtn').classList.remove('hidden');
             }
             renderExchanges();
+            updatePairSelect();
             renderBots();
+        }
+
+        function updatePairSelect() {
+            const select = document.getElementById('pairSelect');
+            select.innerHTML = '<option value="">Всі пари</option>';
+
+            if (!selectedExchange) return;
+
+            const exData = exchanges.find(e => e.name === selectedExchange);
+            const settle = exData && exData.settle ? exData.settle : 'usdt';
+            const contracts = demoContracts[settle] || ['BTC_USDT', 'ETH_USDT'];
+
+            contracts.forEach(pair => {
+                const opt = document.createElement('option');
+                opt.value = pair;
+                opt.textContent = pair;
+                if (pair === selectedPair) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function changePair(pair) {
+            selectedPair = pair;
+            saveData();
+            renderBots();
+        }
+
+        async function fetchGateContracts(apiUrl, settle) {
+            try {
+                // Динамічний запит до публічного ендпоінта ф'ючерсів Gate.io без жорсткого харкоду
+                const response = await fetch(`${apiUrl}/futures/${settle}/contracts`);
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    demoContracts[settle] = data.map(c => c.name);
+                    updatePairSelect();
+                }
+            } catch (e) {
+                console.log('Використовуються локальні контракти через CORS або помилку мережі');
+            }
         }
 
         function renderBots() {
@@ -180,8 +261,13 @@
                 }
             }
 
+            // Фільтрація за обраною парою з випадаючого списку
+            if (selectedPair) {
+                targetBots = targetBots.filter(b => b.pair === selectedPair);
+            }
+
             if (targetBots.length === 0) {
-                list.innerHTML = '<div class="empty-text">Немає ботів</div>';
+                list.innerHTML = '<div class="empty-text">Немає ботів для обраної пари</div>';
                 return;
             }
 
@@ -191,7 +277,7 @@
                 card.innerHTML = `
                     <div>
                         <strong>${bot.name}</strong>
-                        <span>Статус: ${bot.status}</span>
+                        <span>Пара: ${bot.pair || 'BTC_USDT'} | Статус: ${bot.status}</span>
                         ${!selectedExchange ? `<span class="bot-exchange-tag">${bot.exchange}</span>` : ''}
                     </div>
                     <div class="bot-right">
@@ -203,14 +289,12 @@
         }
 
         function openExchangeModal() {
-            editingExchangeName = null;
-            document.getElementById('exchangeModalTitle').textContent = 'Додати біржу';
-            document.getElementById('exNameInput').value = '';
-            document.getElementById('exNameInput').disabled = false;
-            document.getElementById('exApiUrl').value = '';
-            document.getElementById('exApiKey').value = '';
-            document.getElementById('exSecretKey').value = '';
-            document.getElementById('exMode').value = 'spot';
+            editingExchangeName = 'Gate';
+            const exData = exchanges.find(e => e.name === 'Gate') || {};
+            document.getElementById('exchangeModalTitle').textContent = 'Налаштування Gate';
+            document.getElementById('exApiUrl.value') = exData.apiUrl || 'https://api.gateio.ws/api/v4';
+            document.getElementById('exApiKey').value = exData.apiKey || '';
+            document.getElementById('exSecretKey').value = exData.secretKey || '';
             document.getElementById('deleteExBtn').classList.add('hidden');
             document.getElementById('exchangeModal').classList.remove('hidden');
         }
@@ -222,11 +306,9 @@
 
             document.getElementById('exchangeModalTitle').textContent = 'Налаштування біржі';
             document.getElementById('exNameInput').value = exData.name;
-            document.getElementById('exNameInput').disabled = true;
             document.getElementById('exApiUrl').value = exData.apiUrl || '';
             document.getElementById('exApiKey').value = exData.apiKey || '';
             document.getElementById('exSecretKey').value = exData.secretKey || '';
-            document.getElementById('exMode').value = exData.mode || 'spot';
             document.getElementById('deleteExBtn').classList.remove('hidden');
             document.getElementById('exchangeModal').classList.remove('hidden');
         }
@@ -240,29 +322,23 @@
             const apiUrl = document.getElementById('exApiUrl').value.trim();
             const apiKey = document.getElementById('exApiKey').value.trim();
             const secretKey = document.getElementById('exSecretKey').value.trim();
-            const mode = document.getElementById('exMode').value;
 
             if (!name) return alert('Введіть назву біржі');
             if (!apiUrl) return alert('Введіть Base URL API');
 
-            if (editingExchangeName) {
-                let ex = exchanges.find(e => e.name === editingExchangeName);
-                if (ex) {
-                    ex.apiUrl = apiUrl;
-                    ex.apiKey = apiKey;
-                    ex.secretKey = secretKey;
-                    ex.mode = mode;
-                }
+            let ex = exchanges.find(e => e.name === name);
+            if (ex) {
+                ex.apiUrl = apiUrl;
+                ex.apiKey = apiKey;
+                ex.secretKey = secretKey;
             } else {
-                if (exchanges.some(e => e.name === name)) {
-                    return alert('Така біржа вже існує');
-                }
-                exchanges.push({ name, apiUrl, apiKey, secretKey, mode });
+                exchanges.push({ name, apiUrl, apiKey, secretKey, mode: 'futures_usdt', settle: 'usdt', leverage: 10 });
                 if (!bots[name]) bots[name] = [];
             }
 
             saveData();
             closeExchangeModal();
+            fetchGateContracts(apiUrl, 'usdt');
             renderExchanges();
             renderBots();
         }
@@ -280,14 +356,42 @@
                 saveData();
                 closeExchangeModal();
                 renderExchanges();
+                updatePairSelect();
                 renderBots();
             }
+        }
+
+        function openBotParamsModal() {
+            if (!selectedExchange) return alert('Спочатку виберіть біржу Gate');
+            const exData = exchanges.find(e => e.name === selectedExchange);
+            document.getElementById('futuresSettle').value = exData.settle || 'usdt';
+            document.getElementById('futuresLeverage').value = exData.leverage || 10;
+            document.getElementById('botParamsModal').classList.remove('hidden');
+        }
+
+        function closeBotParamsModal() {
+            document.getElementById('botParamsModal').classList.add('hidden');
+        }
+
+        function saveBotParams() {
+            if (!selectedExchange) return;
+            const settle = document.getElementById('futuresSettle').value;
+            const leverage = document.getElementById('futuresLeverage').value;
+
+            let exData = exchanges.find(e => e.name === selectedExchange);
+            if (exData) {
+                exData.settle = settle;
+                exData.leverage = leverage;
+                saveData();
+                fetchGateContracts(exData.apiUrl, settle);
+            }
+            closeBotParamsModal();
         }
 
         function openBotModal() {
             if (!selectedExchange) return;
             editingBotIndex = null;
-            document.getElementById('botModalTitle').textContent = 'Створити бота';
+            document.getElementById('botModalTitle').textContent = 'Створити ф\'ючерсного бота';
             document.getElementById('botNameInput').value = '';
             document.getElementById('botStatusInput').value = 'Зупинено';
             document.getElementById('deleteBotBtn').classList.add('hidden');
@@ -317,13 +421,12 @@
             if (!name) return alert('Введіть назву бота');
 
             if (editingBotIndex !== null) {
-                // Редагування існуючого бота
                 bots[editingBotIndex.exName][editingBotIndex.index].name = name;
                 bots[editingBotIndex.exName][editingBotIndex.index].status = status;
             } else {
-                // Створення нового бота для обраної біржі
                 if (!bots[selectedExchange]) bots[selectedExchange] = [];
-                bots[selectedExchange].push({ name: name, status: status });
+                const pairToAssign = selectedPair || 'BTC_USDT';
+                bots[selectedExchange].push({ name: name, status: status, pair: pairToAssign });
             }
 
             saveData();
@@ -342,6 +445,7 @@
         }
 
         renderExchanges();
+        updatePairSelect();
         renderBots();
     </script>
 </body>
