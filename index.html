@@ -199,7 +199,8 @@
             if (!targetUrl) return alert("Вкажіть URL");
 
             fullApiUrl = targetUrl;
-            const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(targetUrl)}`;
+            // Викликаємо власний бекенд-проксі на Vercel
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
 
             try {
                 const response = await fetch(proxyUrl);
@@ -215,7 +216,7 @@
                     alert("Поле last_price не знайдено у відповіді API");
                 }
             } catch (err) {
-                alert("Помилка запиту.\nВикликаний проксі URL:\n" + proxyUrl + "\n\nДеталі: " + err.message);
+                alert("Помилка запиту через власний бекенд.\nДеталі: " + err.message);
             }
         }
 
@@ -277,7 +278,7 @@
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.remove('hidden');
+            document.getElementById('botDelBtn').classList.add('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
