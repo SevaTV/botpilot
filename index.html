@@ -17,11 +17,12 @@
         .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
         .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
-        .settings-icon { font-size: 12px; opacity: 0.6; }
+        .settings-icon { font-size: 12px; opacity: 0.6; cursor: pointer; }
 
         /* Список ботів */
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .bot-info span { font-size: 12px; color: #888; display: block; }
+        .bot-right { display: flex; align-items: center; gap: 10px; }
         .bot-exchange-tag { font-size: 11px; background: #333; color: #00ffcc; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
         .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
 
@@ -98,14 +99,22 @@
 
     <div id="botModal" class="modal hidden">
         <div class="modal-content">
-            <h3>Створити бота</h3>
+            <h3 id="botModalTitle">Створити бота</h3>
             <div class="form-group">
                 <label>Назва бота</label>
                 <input type="text" id="botNameInput" placeholder="Наприклад: Grid Bot #1">
             </div>
+            <div class="form-group">
+                <label>Статус</label>
+                <select id="botStatusInput">
+                    <option value="Працює">Працює</option>
+                    <option value="Зупинено">Зупинено</option>
+                </select>
+            </div>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closeBotModal()">Скасувати</button>
-                <button class="btn-save" onclick="saveBot()">Створити</button>
+                <button id="deleteBotBtn" class="btn-delete hidden" onclick="deleteBot()">Видалити</button>
+                <button class="btn-save" onclick="saveBot()">Зберегти</button>
             </div>
         </div>
     </div>
@@ -116,6 +125,7 @@
 
         let selectedExchange = null;
         let editingExchangeName = null;
+        let editingBotIndex = null;
 
         function saveData() {
             localStorage.setItem('botpilot_exchanges', JSON.stringify(exchanges));
@@ -161,11 +171,11 @@
             let targetBots = [];
 
             if (selectedExchange) {
-                targetBots = (bots[selectedExchange] || []).map(b => ({...b, exchange: selectedExchange}));
+                targetBots = (bots[selectedExchange] || []).map((b, index) => ({...b, exchange: selectedExchange, index: index}));
             } else {
                 for (let ex in bots) {
-                    (bots[ex] || []).forEach(b => {
-                        targetBots.push({...b, exchange: ex});
+                    (bots[ex] || []).forEach((b, index) => {
+                        targetBots.push({...b, exchange: ex, index: index});
                     });
                 }
             }
@@ -183,6 +193,9 @@
                         <strong>${bot.name}</strong>
                         <span>Статус: ${bot.status}</span>
                         ${!selectedExchange ? `<span class="bot-exchange-tag">${bot.exchange}</span>` : ''}
+                    </div>
+                    <div class="bot-right">
+                        <span class="settings-icon" onclick="editBot('${bot.exchange}', ${bot.index})">⚙️</span>
                     </div>
                 `;
                 list.appendChild(card);
@@ -273,7 +286,23 @@
 
         function openBotModal() {
             if (!selectedExchange) return;
+            editingBotIndex = null;
+            document.getElementById('botModalTitle').textContent = 'Створити бота';
             document.getElementById('botNameInput').value = '';
+            document.getElementById('botStatusInput').value = 'Зупинено';
+            document.getElementById('deleteBotBtn').classList.add('hidden');
+            document.getElementById('botModal').classList.remove('hidden');
+        }
+
+        function editBot(exName, index) {
+            editingBotIndex = { exName, index };
+            const botData = bots[exName][index];
+            if (!botData) return;
+
+            document.getElementById('botModalTitle').textContent = 'Налаштування бота';
+            document.getElementById('botNameInput').value = botData.name;
+            document.getElementById('botStatusInput').value = botData.status || 'Зупинено';
+            document.getElementById('deleteBotBtn').classList.remove('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
@@ -283,14 +312,32 @@
 
         function saveBot() {
             const name = document.getElementById('botNameInput').value.trim();
-            if (name && selectedExchange) {
+            const status = document.getElementById('botStatusInput').value;
+
+            if (!name) return alert('Введіть назву бота');
+
+            if (editingBotIndex !== null) {
+                // Редагування існуючого бота
+                bots[editingBotIndex.exName][editingBotIndex.index].name = name;
+                bots[editingBotIndex.exName][editingBotIndex.index].status = status;
+            } else {
+                // Створення нового бота для обраної біржі
                 if (!bots[selectedExchange]) bots[selectedExchange] = [];
-                bots[selectedExchange].push({name: name, status: 'Зупинено'});
+                bots[selectedExchange].push({ name: name, status: status });
+            }
+
+            saveData();
+            closeBotModal();
+            renderBots();
+        }
+
+        function deleteBot() {
+            if (editingBotIndex === null) return;
+            if (confirm('Видалити цього бота?')) {
+                bots[editingBotIndex.exName].splice(editingBotIndex.index, 1);
                 saveData();
                 closeBotModal();
                 renderBots();
-            } else {
-                alert('Введіть назву бота');
             }
         }
 
