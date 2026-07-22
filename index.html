@@ -28,7 +28,7 @@
         /* Модальне вікно */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
         .modal.hidden { display: none; }
-        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; }
+        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; box-sizing: border-box; }
         .modal-content h3 { margin-top: 0; color: #00ffcc; }
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
@@ -55,7 +55,7 @@
     <div class="section">
         <div class="section-header">
             <h3>Боти <span id="selectedExchangeTitle"></span></h3>
-            <button id="botAddBtn" class="add-btn hidden" onclick="addBotPrompt()">+</button>
+            <button id="botAddBtn" class="add-btn hidden" onclick="openBotModal()">+</button>
         </div>
         <div id="botList">
             </div>
@@ -63,10 +63,10 @@
 
     <div id="exchangeModal" class="modal hidden">
         <div class="modal-content">
-            <h3 id="modalTitle">Додати біржу</h3>
+            <h3 id="exchangeModalTitle">Додати біржу</h3>
             <div class="form-group">
                 <label>Назва біржі</label>
-                <input type="text" id="exNameInput" placeholder="Наприклад: Binance">
+                <input type="text" id="exNameInput" placeholder="Наприклад: Gate">
             </div>
             <div class="form-group">
                 <label>API Key</label>
@@ -92,16 +92,23 @@
         </div>
     </div>
 
+    <div id="botModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Створити бота</h3>
+            <div class="form-group">
+                <label>Назва бота</label>
+                <input type="text" id="botNameInput" placeholder="Наприклад: Grid Bot #1">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeBotModal()">Скасувати</button>
+                <button class="btn-save" onclick="saveBot()">Створити</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let exchanges = JSON.parse(localStorage.getItem('botpilot_exchanges')) || [
-            { name: 'Binance', apiKey: '', secretKey: '', mode: 'spot' },
-            { name: 'Bybit', apiKey: '', secretKey: '', mode: 'futures' }
-        ];
-        
-        let bots = JSON.parse(localStorage.getItem('botpilot_bots')) || {
-            'Binance': [{name: 'Grid Bot #1', status: 'Працює'}],
-            'Bybit': [{name: 'DCA Bot #1', status: 'Зупинено'}]
-        };
+        let exchanges = JSON.parse(localStorage.getItem('botpilot_exchanges')) || [];
+        let bots = JSON.parse(localStorage.getItem('botpilot_bots')) || {};
 
         let selectedExchange = null;
         let editingExchangeName = null;
@@ -114,6 +121,12 @@
         function renderExchanges() {
             const list = document.getElementById('exchangeList');
             list.innerHTML = '';
+            
+            if (exchanges.length === 0) {
+                list.innerHTML = '<div class="empty-text">Немає доданих бірж</div>';
+                return;
+            }
+
             exchanges.forEach(ex => {
                 const chip = document.createElement('div');
                 chip.className = `exchange-chip ${selectedExchange === ex.name ? 'active' : ''}`;
@@ -174,7 +187,7 @@
 
         function openExchangeModal() {
             editingExchangeName = null;
-            document.getElementById('modalTitle').textContent = 'Додати біржу';
+            document.getElementById('exchangeModalTitle').textContent = 'Додати біржу';
             document.getElementById('exNameInput').value = '';
             document.getElementById('exNameInput').disabled = false;
             document.getElementById('exApiKey').value = '';
@@ -189,7 +202,7 @@
             const exData = exchanges.find(e => e.name === exName);
             if (!exData) return;
 
-            document.getElementById('modalTitle').textContent = 'Налаштування біржі';
+            document.getElementById('exchangeModalTitle').textContent = 'Налаштування біржі';
             document.getElementById('exNameInput').value = exData.name;
             document.getElementById('exNameInput').disabled = true;
             document.getElementById('exApiKey').value = exData.apiKey || '';
@@ -249,16 +262,26 @@
             }
         }
 
-        function addBotPrompt() {
-            const name = prompt('Введіть назву бота:');
+        function openBotModal() {
+            if (!selectedExchange) return;
+            document.getElementById('botNameInput').value = '';
+            document.getElementById('botModal').classList.remove('hidden');
+        }
+
+        function closeBotModal() {
+            document.getElementById('botModal').classList.add('hidden');
+        }
+
+        function saveBot() {
+            const name = document.getElementById('botNameInput').value.trim();
             if (name && selectedExchange) {
-                const trimmed = name.trim();
-                if (trimmed) {
-                    if (!bots[selectedExchange]) bots[selectedExchange] = [];
-                    bots[selectedExchange].push({name: trimmed, status: 'Зупинено'});
-                    saveData();
-                    renderBots();
-                }
+                if (!bots[selectedExchange]) bots[selectedExchange] = [];
+                bots[selectedExchange].push({name: name, status: 'Зупинено'});
+                saveData();
+                closeBotModal();
+                renderBots();
+            } else {
+                alert('Введіть назву бота');
             }
         }
 
