@@ -69,6 +69,10 @@
                 <input type="text" id="exNameInput" placeholder="Наприклад: Gate">
             </div>
             <div class="form-group">
+                <label>Base URL API</label>
+                <input type="text" id="exApiUrl" placeholder="Наприклад: https://api.gateio.ws/api/v4">
+            </div>
+            <div class="form-group">
                 <label>API Key</label>
                 <input type="password" id="exApiKey" placeholder="Введіть API ключ">
             </div>
@@ -190,6 +194,7 @@
             document.getElementById('exchangeModalTitle').textContent = 'Додати біржу';
             document.getElementById('exNameInput').value = '';
             document.getElementById('exNameInput').disabled = false;
+            document.getElementById('exApiUrl').value = '';
             document.getElementById('exApiKey').value = '';
             document.getElementById('exSecretKey').value = '';
             document.getElementById('exMode').value = 'spot';
@@ -205,6 +210,7 @@
             document.getElementById('exchangeModalTitle').textContent = 'Налаштування біржі';
             document.getElementById('exNameInput').value = exData.name;
             document.getElementById('exNameInput').disabled = true;
+            document.getElementById('exApiUrl').value = exData.apiUrl || '';
             document.getElementById('exApiKey').value = exData.apiKey || '';
             document.getElementById('exSecretKey').value = exData.secretKey || '';
             document.getElementById('exMode').value = exData.mode || 'spot';
@@ -218,15 +224,18 @@
 
         function saveExchange() {
             const name = document.getElementById('exNameInput').value.trim();
+            const apiUrl = document.getElementById('exApiUrl').value.trim();
             const apiKey = document.getElementById('exApiKey').value.trim();
             const secretKey = document.getElementById('exSecretKey').value.trim();
             const mode = document.getElementById('exMode').value;
 
             if (!name) return alert('Введіть назву біржі');
+            if (!apiUrl) return alert('Введіть Base URL API');
 
             if (editingExchangeName) {
                 let ex = exchanges.find(e => e.name === editingExchangeName);
                 if (ex) {
+                    ex.apiUrl = apiUrl;
                     ex.apiKey = apiKey;
                     ex.secretKey = secretKey;
                     ex.mode = mode;
@@ -235,7 +244,7 @@
                 if (exchanges.some(e => e.name === name)) {
                     return alert('Така біржа вже існує');
                 }
-                exchanges.push({ name, apiKey, secretKey, mode });
+                exchanges.push({ name, apiUrl, apiKey, secretKey, mode });
                 if (!bots[name]) bots[name] = [];
             }
 
