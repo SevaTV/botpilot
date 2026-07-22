@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Botpilot</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; margin: 0; }
+        h1 { color: #00ffcc; font-size: 24px; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        button { background: #00ffcc; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 5px; width: 100%; cursor: pointer; }
+        .status { color: #ff5555; font-weight: bold; }
+        .active { color: #55ff55; }
+    </style>
+</head>
+<body>
+    <h1>Botpilot</h1>
+    <div class="card">
+        <h3>Статус бота</h3>
+        <p>Головний модуль: <span id="status" class="status">Зупинено</span></p>
+        <button id="toggleBtn" onclick="toggleBot()">Запустити бота</button>
+    </div>
+    <div class="card">
+        <h3>Біржа</h3>
+        <p>Підключення: Немає</p>
+    </div>
+
+    <script>
+        let isRunning = false;
+        function toggleBot() {
+            isRunning = !isRunning;
+            const statusEl = document.getElementById('status');
+            const btnEl = document.getElementById('toggleBtn');
+            if (isRunning) {
+                statusEl.textContent = 'Працює';
+                statusEl.className = 'status active';
+                btnEl.textContent = 'Зупинити бота';
+                btnEl.style.background = '#ff5555';
+            } else {
+                statusEl.textContent = 'Зупинено';
+                statusEl.className = 'status';
+                btnEl.textContent = 'Запустити бота';
+                btnEl.style.background = '#00ffcc';
+            }
+        }
+    </script>
+</body>
+</html>
