@@ -79,7 +79,7 @@
                 <label>Повний URL запиту</label>
                 <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT">
             </div>
-            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Введіть повну адресу для отримання ціни контракту.</p>
+            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Адреса контракту біржі.</p>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
                 <button class="btn-save" onclick="fetchPairPrice()">Оновити</button>
@@ -195,14 +195,15 @@
         function closePairConfigModal() { document.getElementById('pairConfigModal').classList.add('hidden'); }
 
         async function fetchPairPrice() {
-            fullApiUrl = document.getElementById('apiFullUrlInput').value.trim();
-            if (!fullApiUrl) return alert("Вкажіть URL");
+            const targetUrl = document.getElementById('apiFullUrlInput').value.trim();
+            if (!targetUrl) return alert("Вкажіть URL");
 
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fullApiUrl)}`;
+            fullApiUrl = targetUrl;
+            const proxyUrl = `https://api.cors.lol/?url=${encodeURIComponent(targetUrl)}`;
 
             try {
                 const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Помилка сервера');
+                if (!response.ok) throw new Error('Помилка сервера: ' + response.status);
                 const data = await response.json();
                 
                 if (data && data.last_price) {
@@ -214,7 +215,7 @@
                     alert("Поле last_price не знайдено у відповіді API");
                 }
             } catch (err) {
-                alert("Помилка запиту.\nURL:\n" + fullApiUrl + "\n\nПроксі URL:\n" + proxyUrl);
+                alert("Помилка запиту.\nВикликаний проксі URL:\n" + proxyUrl + "\n\nДеталі: " + err.message);
             }
         }
 
