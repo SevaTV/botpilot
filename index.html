@@ -198,9 +198,9 @@
             fullApiUrl = document.getElementById('apiFullUrlInput').value.trim();
             if (!fullApiUrl) return alert("Вкажіть URL");
 
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fullApiUrl)}`;
+
             try {
-                // Використовуємо публічний проксі для обходу CORS блокування браузера
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fullApiUrl)}`;
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error('Помилка сервера');
                 const data = await response.json();
@@ -214,7 +214,7 @@
                     alert("Поле last_price не знайдено у відповіді API");
                 }
             } catch (err) {
-                alert("Помилка запиту через проксі. Перевірте правильність URL контракту.");
+                alert("Помилка запиту.\nURL:\n" + fullApiUrl + "\n\nПроксі URL:\n" + proxyUrl);
             }
         }
 
