@@ -190,7 +190,7 @@
 
             document.getElementById('modalTitle').textContent = 'Налаштування біржі';
             document.getElementById('exNameInput').value = exData.name;
-            document.getElementById('exNameInput').disabled = true; // Назву не міняємо для простоти ключів
+            document.getElementById('exNameInput').disabled = true;
             document.getElementById('exApiKey').value = exData.apiKey || '';
             document.getElementById('exSecretKey').value = exData.secretKey || '';
             document.getElementById('exMode').value = exData.mode || 'spot';
@@ -211,7 +211,6 @@
             if (!name) return alert('Введіть назву біржі');
 
             if (editingExchangeName) {
-                // Редагування існуючої
                 let ex = exchanges.find(e => e.name === editingExchangeName);
                 if (ex) {
                     ex.apiKey = apiKey;
@@ -219,7 +218,6 @@
                     ex.mode = mode;
                 }
             } else {
-                // Додавання нової
                 if (exchanges.some(e => e.name === name)) {
                     return alert('Така біржа вже існує');
                 }
