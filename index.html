@@ -5,44 +5,153 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botpilot</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; padding: 20px; margin: 0; }
-        h1 { color: #00ffcc; font-size: 24px; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        button { background: #00ffcc; color: #000; border: none; padding: 10px 15px; font-weight: bold; border-radius: 5px; width: 100%; cursor: pointer; }
-        .status { color: #ff5555; font-weight: bold; }
-        .active { color: #55ff55; }
+        body { font-family: sans-serif; background: #121212; color: #fff; padding: 15px; margin: 0; }
+        h1 { color: #00ffcc; font-size: 22px; margin-bottom: 15px; }
+        .section { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .section-header h3 { margin: 0; font-size: 16px; color: #ccc; }
+        .add-btn { background: #00ffcc; color: #000; border: none; width: 30px; height: 30px; font-weight: bold; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .hidden { display: none; }
+        
+        /* Список бірж */
+        .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
+        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+        .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
+
+        /* Список ботів */
+        .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .bot-info span { font-size: 12px; color: #888; display: block; }
+        .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
+
+        /* Форми додавання */
+        .input-group { display: flex; gap: 8px; margin-top: 10px; }
+        .input-group input { flex: 1; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 6px; }
+        .input-group button { background: #00ffcc; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
     <h1>Botpilot</h1>
-    <div class="card">
-        <h3>Статус бота</h3>
-        <p>Головний модуль: <span id="status" class="status">Зупинено</span></p>
-        <button id="toggleBtn" onclick="toggleBot()">Запустити бота</button>
+
+    <div class="section">
+        <div class="section-header">
+            <h3>Біржі</h3>
+            <button class="add-btn" onclick="toggleExchangeInput()">+</button>
+        </div>
+        <div id="exchangeInputBox" class="input-group hidden">
+            <input type="text" id="exchangeName" placeholder="Назва біржі (напр. Binance)">
+            <button onclick="addExchange()">Додати</button>
+        </div>
+        <div class="exchange-list" id="exchangeList">
+            </div>
     </div>
-    <div class="card">
-        <h3>Біржа</h3>
-        <p>Підключення: Немає</p>
+
+    <div class="section">
+        <div class="section-header">
+            <h3>Боти <span id="selectedExchangeTitle"></span></h3>
+            <button id="botAddBtn" class="add-btn hidden" onclick="toggleBotInput()">+</button>
+        </div>
+        <div id="botInputBox" class="input-group hidden">
+            <input type="text" id="botName" placeholder="Назва бота (напр. Scalper)">
+            <button onclick="addBot()">Створити</button>
+        </div>
+        <div id="botList">
+            <div class="empty-text">Оберіть біржу вище</div>
+        </div>
     </div>
 
     <script>
-        let isRunning = false;
-        function toggleBot() {
-            isRunning = !isRunning;
-            const statusEl = document.getElementById('status');
-            const btnEl = document.getElementById('toggleBtn');
-            if (isRunning) {
-                statusEl.textContent = 'Працює';
-                statusEl.className = 'status active';
-                btnEl.textContent = 'Зупинити бота';
-                btnEl.style.background = '#ff5555';
-            } else {
-                statusEl.textContent = 'Зупинено';
-                statusEl.className = 'status';
-                btnEl.textContent = 'Запустити бота';
-                btnEl.style.background = '#00ffcc';
+        let exchanges = ['Binance', 'Bybit'];
+        let selectedExchange = null;
+        let bots = {
+            'Binance': [{name: 'Grid Bot #1', status: 'Працює'}],
+            'Bybit': [{name: 'DCA Bot #1', status: 'Зупинено'}]
+        };
+
+        function renderExchanges() {
+            const list = document.getElementById('exchangeList');
+            list.innerHTML = '';
+            exchanges.forEach(ex => {
+                const chip = document.createElement('div');
+                chip.className = `exchange-chip ${selectedExchange === ex ? 'active' : ''}`;
+                chip.textContent = ex;
+                chip.onclick = () => selectExchange(ex);
+                list.appendChild(chip);
+            });
+        }
+
+        function selectExchange(ex) {
+            selectedExchange = ex;
+            document.getElementById('selectedExchangeTitle').textContent = `(${ex})`;
+            document.getElementById('botAddBtn').classList.remove('hidden');
+            document.getElementById('exchangeInputBox').classList.add('hidden');
+            renderExchanges();
+            renderBots();
+        }
+
+        function renderBots() {
+            const list = document.getElementById('botList');
+            list.innerHTML = '';
+            
+            if (!selectedExchange) {
+                list.innerHTML = '<div class="empty-text">Оберіть біржу вище</div>';
+                return;
+            }
+
+            const currentBots = bots[selectedExchange] || [];
+            if (currentBots.length === 0) {
+                list.innerHTML = '<div class="empty-text">Немає ботів на цій біржі</div>';
+                return;
+            }
+
+            currentBots.forEach(bot => {
+                const card = document.createElement('div');
+                card.className = 'bot-card';
+                card.innerHTML = `
+                    <div>
+                        <strong>${bot.name}</strong>
+                        <span>Статус: ${bot.status}</span>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function toggleExchangeInput() {
+            const box = document.getElementById('exchangeInputBox');
+            box.classList.toggle('hidden');
+        }
+
+        function addExchange() {
+            const input = document.getElementById('exchangeName');
+            const name = input.value.trim();
+            if (name && !exchanges.includes(name)) {
+                exchanges.push(name);
+                bots[name] = [];
+                input.value = '';
+                toggleExchangeInput();
+                selectExchange(name);
             }
         }
+
+        function toggleBotInput() {
+            const box = document.getElementById('botInputBox');
+            box.classList.toggle('hidden');
+        }
+
+        function addBot() {
+            const input = document.getElementById('botName');
+            const name = input.value.trim();
+            if (name && selectedExchange) {
+                if (!bots[selectedExchange]) bots[selectedExchange] = [];
+                bots[selectedExchange].push({name: name, status: 'Зупинено'});
+                input.value = '';
+                toggleBotInput();
+                renderBots();
+            }
+        }
+
+        // Ініціалізація при завантаженні
+        renderExchanges();
     </script>
 </body>
 </html>
