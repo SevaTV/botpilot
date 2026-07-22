@@ -171,21 +171,36 @@
             
             const botList = document.getElementById('botList');
             botList.innerHTML = '';
-            let list = activeEx ? (bots[activeEx] || []) : [];
+            
+            let list = [];
+            if (activeEx) {
+                list = bots[activeEx] || [];
+            } else {
+                for (let exName in bots) {
+                    list = list.concat(bots[exName] || []);
+                }
+            }
 
             if (!list.length) {
                 botList.innerHTML = '<div class="empty-text">Боти відсутні</div>';
             } else {
                 list.forEach((bot) => {
-                    const originalIdx = bots[activeEx].indexOf(bot);
+                    let ownerEx = activeEx;
+                    if (!ownerEx) {
+                        for (let exName in bots) {
+                            if ((bots[exName] || []).includes(bot)) { ownerEx = exName; break; }
+                        }
+                    }
+
+                    const originalIdx = bots[ownerEx] ? bots[ownerEx].indexOf(bot) : 0;
                     const card = document.createElement('div');
                     card.className = 'bot-card';
                     card.innerHTML = `
                         <div>
                             <strong>${bot.name}</strong>
-                            <span>Статус: ${bot.status}</span>
+                            <span>Біржа: ${ownerEx || '—'} | Статус: ${bot.status}</span>
                         </div>
-                        <span class="gear-btn" onclick="openEditBot('${activeEx}', ${originalIdx})">⚙️</span>`;
+                        <span class="gear-btn" onclick="openEditBot('${ownerEx}', ${originalIdx})">⚙️</span>`;
                     botList.appendChild(card);
                 });
             }
@@ -199,7 +214,6 @@
             if (!targetUrl) return alert("Вкажіть URL");
 
             fullApiUrl = targetUrl;
-            // Викликаємо власний бекенд-проксі на Vercel
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
 
             try {
@@ -274,11 +288,12 @@
 
         function openEditBot(exName, i) {
             editBotIdx = i;
+            activeEx = exName; // Фіксуємо біржу для редагування
             const bot = bots[exName][i];
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.add('hidden');
+            document.getElementById('botDelBtn').classList.remove('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
@@ -291,6 +306,7 @@
                 bots[activeEx][editBotIdx].name = name;
                 bots[activeEx][editBotIdx].status = status;
             } else {
+                if (!bots[activeEx]) bots[activeEx] = [];
                 bots[activeEx].push({ name: name, status: status });
             }
             closeBotModal(); updateUI();
