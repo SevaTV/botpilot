@@ -11,7 +11,6 @@
         h1 { color: #00ffcc; font-size: 22px; margin: 0; }
         .top-controls { display: flex; align-items: center; gap: 8px; }
         
-        /* Стиль для відображення останньої ціни */
         .price-display { background: #1e1e1e; border: 1px solid #444; color: #00ffcc; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: bold; }
         .gear-btn { cursor: pointer; font-size: 18px; opacity: 0.8; transition: 0.2s; }
         .gear-btn:hover { opacity: 1; color: #00ffcc; }
@@ -80,7 +79,7 @@
                 <label>Повний URL до пари</label>
                 <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/BTC_USDT">
             </div>
-            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Вкажіть посилання на конкретну торгову пару для отримання ціни.</p>
+            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Вкажіть посилання на контракт. Запит піде через безпечний проксі.</p>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
                 <button class="btn-save" onclick="fetchPairPrice()">Отримати ціну</button>
@@ -200,11 +199,12 @@
             if (!fullApiUrl) return alert("Вкажіть URL");
 
             try {
-                const response = await fetch(fullApiUrl, { mode: 'cors' });
+                // Використовуємо публічний проксі для обходу CORS блокування браузера
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fullApiUrl)}`;
+                const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error('Помилка сервера');
                 const data = await response.json();
                 
-                // Отримуємо останню ціну з поля last_price об'єкта контракту
                 if (data && data.last_price) {
                     lastPriceValue = data.last_price;
                     alert("Ціну успішно оновлено!");
@@ -214,7 +214,7 @@
                     alert("Поле last_price не знайдено у відповіді API");
                 }
             } catch (err) {
-                alert("Помилка CORS або мережі при запиті до API біржі.");
+                alert("Помилка запиту через проксі. Перевірте правильність URL контракту.");
             }
         }
 
@@ -276,7 +276,7 @@
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.remove('hidden');
+            document.getElementById('botDelBtn').classList.add('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
