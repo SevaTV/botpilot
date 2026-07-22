@@ -7,7 +7,6 @@
     <style>
         body { font-family: sans-serif; background: #121212; color: #fff; padding: 15px; margin: 0; }
         
-        /* Верхня панель (назва та вибір пари) */
         .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         h1 { color: #00ffcc; font-size: 22px; margin: 0; }
         .top-controls { display: flex; align-items: center; gap: 8px; }
@@ -22,18 +21,15 @@
         .add-btn { background: #00ffcc; color: #000; border: none; width: 30px; height: 30px; font-weight: bold; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
         .hidden { display: none; }
         
-        /* Список бірж */
         .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
         .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
         .settings-icon { font-size: 12px; opacity: 0.6; cursor: pointer; }
 
-        /* Картки ботів */
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .bot-card span { font-size: 12px; color: #888; display: block; margin-top: 2px; }
         .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
 
-        /* Модальні вікна */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 999; }
         .modal.hidden { display: none !important; }
         .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; box-sizing: border-box; }
@@ -57,7 +53,7 @@
             <select id="mainPairSelect" class="pair-select" onchange="setSelectedPair(this.value)">
                 <option value="">Всі пари</option>
             </select>
-            <span class="gear-btn" onclick="openPairConfigModal()" title="Налаштування API пар">⚙️</span>
+            <span class="gear-btn" onclick="openPairConfigModal()" title="Налаштування URL пар">⚙️</span>
         </div>
     </div>
 
@@ -79,15 +75,15 @@
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
-            <h3>Шлях до списку пар</h3>
+            <h3>Повний шлях до API пар</h3>
             <div class="form-group">
-                <label>API Endpoint (наприклад: /futures/usdt/contracts)</label>
-                <input type="text" id="apiEndpointInput" placeholder="/futures/usdt/contracts">
+                <label>Повний URL запиту</label>
+                <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts">
             </div>
-            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Додаток об'єднає Base URL біржі та цей шлях для отримання списку через публічний запит.</p>
+            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Введіть повну адресу для отримання списку контрактів незалежно від налаштувань біржі.</p>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
-                <button class="btn-save" onclick="loadPairsFromAPI()">Оновити</button>
+                <button class="btn-save" onclick="loadPairsFromFullURL()">Оновити</button>
             </div>
         </div>
     </div>
@@ -146,19 +142,18 @@
         let bots = JSON.parse(localStorage.getItem('bp_bots')) || {};
         let activeEx = null;
         let selectedPair = localStorage.getItem('bp_pair') || "";
-        let pairEndpoint = localStorage.getItem('bp_endpoint') || "/futures/usdt/contracts";
+        let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts";
         let editExIdx = null;
         let editBotIdx = null;
 
-        document.getElementById('apiEndpointInput').value = pairEndpoint;
+        document.getElementById('apiFullUrlInput').value = fullApiUrl;
 
         function updateUI() {
             localStorage.setItem('bp_ex', JSON.stringify(exchanges));
             localStorage.setItem('bp_bots', JSON.stringify(bots));
             localStorage.setItem('bp_pair', selectedPair);
-            localStorage.setItem('bp_endpoint', pairEndpoint);
+            localStorage.setItem('bp_full_url', fullApiUrl);
 
-            // Біржі
             const exList = document.getElementById('exchangeList');
             exList.innerHTML = exchanges.length ? '' : '<div class="empty-text">Немає доданих бірж</div>';
             exchanges.forEach((ex, i) => {
@@ -169,11 +164,9 @@
                 exList.appendChild(div);
             });
 
-            // Заголовок та кнопка створення бота
             document.getElementById('exchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
             document.getElementById('botAddBtn').classList.toggle('hidden', !activeEx);
             
-            // Боти
             const botList = document.getElementById('botList');
             botList.innerHTML = '';
             let list = activeEx ? (bots[activeEx] || []) : [];
@@ -200,18 +193,15 @@
             }
         }
 
-        // Параметри пар
         function openPairConfigModal() { document.getElementById('pairConfigModal').classList.remove('hidden'); }
         function closePairConfigModal() { document.getElementById('pairConfigModal').classList.add('hidden'); }
 
-        async function loadPairsFromAPI() {
-            if (!activeEx) return alert("Оберіть біржу спочатку");
-            const ex = exchanges.find(e => e.name === activeEx);
-            pairEndpoint = document.getElementById('apiEndpointInput').value.trim();
-            if (!pairEndpoint) return alert("Вкажіть шлях");
+        async function loadPairsFromFullURL() {
+            fullApiUrl = document.getElementById('apiFullUrlInput').value.trim();
+            if (!fullApiUrl) return alert("Вкажіть повну URL-адресу");
 
             try {
-                const res = await fetch(ex.url + pairEndpoint);
+                const res = await fetch(fullApiUrl);
                 const data = await res.json();
                 const select = document.getElementById('mainPairSelect');
                 select.innerHTML = '<option value="">Всі пари</option>';
@@ -229,13 +219,12 @@
                 closePairConfigModal();
                 updateUI();
             } catch (e) {
-                alert("Помилка запиту до API біржі (можливо блокує CORS).");
+                alert("Помилка запиту до API (перевірте URL або CORS обмеження).");
             }
         }
 
         function setSelectedPair(val) { selectedPair = val; updateUI(); }
 
-        // Біржі модалка
         function openExchangeModal() {
             editExIdx = null;
             document.getElementById('exModalTitle').textContent = "Додати біржу";
@@ -279,9 +268,8 @@
 
         function closeExchangeModal() { document.getElementById('exchangeModal').classList.add('hidden'); }
 
-        // Боти модалка
         function openBotModal() {
-            if (!activeEx) return;
+            if (!activeEx) return alert("Виберіть біржу");
             editBotIdx = null;
             document.getElementById('botModalTitle').textContent = "Новий бот";
             document.getElementById('botName').value = "";
