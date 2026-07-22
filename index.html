@@ -162,7 +162,10 @@
                 const div = document.createElement('div');
                 div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
                 div.innerHTML = `${ex.name} <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>`;
-                div.onclick = () => { activeEx = (activeEx === ex.name) ? null : ex.name; updateUI(); };
+                div.onclick = () => { 
+                    activeEx = (activeEx === ex.name) ? null : ex.name; 
+                    updateUI(); 
+                };
                 exList.appendChild(div);
             });
 
@@ -172,35 +175,29 @@
             const botList = document.getElementById('botList');
             botList.innerHTML = '';
             
-            let list = [];
+            let displayList = [];
             if (activeEx) {
-                list = bots[activeEx] || [];
+                let items = bots[activeEx] || [];
+                items.forEach((bot, idx) => displayList.push({ bot, exName: activeEx, idx }));
             } else {
                 for (let exName in bots) {
-                    list = list.concat(bots[exName] || []);
+                    let items = bots[exName] || [];
+                    items.forEach((bot, idx) => displayList.push({ bot, exName, idx }));
                 }
             }
 
-            if (!list.length) {
+            if (!displayList.length) {
                 botList.innerHTML = '<div class="empty-text">Боти відсутні</div>';
             } else {
-                list.forEach((bot) => {
-                    let ownerEx = activeEx;
-                    if (!ownerEx) {
-                        for (let exName in bots) {
-                            if ((bots[exName] || []).includes(bot)) { ownerEx = exName; break; }
-                        }
-                    }
-
-                    const originalIdx = bots[ownerEx] ? bots[ownerEx].indexOf(bot) : 0;
+                displayList.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'bot-card';
                     card.innerHTML = `
                         <div>
-                            <strong>${bot.name}</strong>
-                            <span>Біржа: ${ownerEx || '—'} | Статус: ${bot.status}</span>
+                            <strong>${item.bot.name}</strong>
+                            <span>Біржа: ${item.exName} | Статус: ${item.bot.status}</span>
                         </div>
-                        <span class="gear-btn" onclick="openEditBot('${ownerEx}', ${originalIdx})">⚙️</span>`;
+                        <span class="gear-btn" onclick="openEditBot('${item.exName}', ${item.idx})">⚙️</span>`;
                     botList.appendChild(card);
                 });
             }
@@ -288,7 +285,7 @@
 
         function openEditBot(exName, i) {
             editBotIdx = i;
-            activeEx = exName; // Фіксуємо біржу для редагування
+            activeEx = exName;
             const bot = bots[exName][i];
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
@@ -313,7 +310,9 @@
         }
 
         function deleteBot() {
-            bots[activeEx].splice(editBotIdx, 1);
+            if (editBotIdx !== null && activeEx && bots[activeEx]) {
+                bots[activeEx].splice(editBotIdx, 1);
+            }
             closeBotModal(); updateUI();
         }
 
