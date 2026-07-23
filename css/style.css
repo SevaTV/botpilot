@@ -205,19 +205,20 @@ h1 {
 
 .pos-header-left {
     display: flex;
-    align-items: center;
-    gap: 3px;
+    align-items: flex-start;
+    gap: 1px;
 }
 
 .pos-header-left strong {
     font-size: 14px;
     margin-right: 2px;
+    line-height: 1;
 }
 
-/* Шрифт 4px та мінімальні відступи */
+/* Розмір шрифта 4px, вирівнювання по верху та мінімальні відступи 1px */
 .pos-badge-tag {
     font-size: 4px;
-    padding: 0.5px 2px;
+    padding: 0.5px 1px;
     border-radius: 2px;
     border: 1px solid #444;
     font-weight: 600;
@@ -245,7 +246,7 @@ h1 {
     font-size: 4px;
     background: #1e1e1e;
     color: #00ffcc;
-    padding: 0.5px 2px;
+    padding: 0.5px 1px;
     border-radius: 2px;
     border: 1px solid #444;
     font-weight: 600;
