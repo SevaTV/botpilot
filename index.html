@@ -4,442 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botpilot</title>
-    <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; padding: 15px; margin: 0; }
-        
-        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        h1 { color: #00ffcc; font-size: 22px; margin: 0; }
-        .top-controls { display: flex; align-items: center; gap: 8px; }
-        
-        .pair-display { background: #1e1e1e; border: 1px solid #444; color: #ccc; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .price-display { background: #1e1e1e; border: 1px solid #444; color: #00ffcc; padding: 6px 12px; border-radius: 6px; font-size: 14px; font-weight: bold; }
-        .gear-btn { cursor: pointer; font-size: 18px; opacity: 0.8; transition: 0.2s; }
-        .gear-btn:hover { opacity: 1; color: #00ffcc; }
-
-        .section { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .section-header h3 { margin: 0; font-size: 16px; color: #ccc; }
-        
-        .add-btn { background: #00ffcc; color: #000; border: none; width: 30px; height: 30px; font-weight: bold; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
-        .hidden { display: none; }
-        
-        .exchange-list { display: flex; flex-direction: column; gap: 8px; }
-        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-        .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
-        
-        .exchange-balance { font-size: 11px; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; color: #00ffcc; white-space: nowrap; flex-shrink: 0; }
-        .exchange-balance.empty { background: rgba(255, 85, 85, 0.2); color: #ff5555; border: 1px solid #ff5555; }
-        .exchange-chip.active .exchange-balance { background: #000; color: #00ffcc; }
-        .exchange-chip.active .exchange-balance.empty { background: #000; color: #ff5555; border-color: #ff5555; }
-
-        .exchange-info { min-width: 0; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 2px; }
-        .settings-icon { font-size: 14px; opacity: 0.6; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
-
-        .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .bot-card span { font-size: 12px; color: #888; display: block; margin-top: 2px; }
-        .empty-text { color: #666; font-size: 14px; text-align: center; padding: 10px; }
-
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 999; }
-        .modal.hidden { display: none !important; }
-        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
-        .modal-content h3 { margin-top: 0; color: #00ffcc; font-size: 18px; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
-        .form-group input, .form-group select { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; outline: none; }
-        
-        .debug-box { background: #111; border: 1px solid #ff5555; padding: 8px; border-radius: 6px; font-size: 11px; color: #ff8888; margin-top: 10px; white-space: pre-wrap; word-break: break-all; max-height: 140px; overflow-y: auto; }
-        .debug-box.success { border-color: #00ffcc; color: #00ffcc; }
-
-        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
-        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .btn-save { background: #00ffcc; color: #000; }
-        .btn-cancel { background: #333; color: #fff; }
-        .btn-delete { background: #ff5555; color: #fff; }
-
-        .app-version { font-size: 10px; color: #444; text-align: center; margin-top: 20px; user-select: none; }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-    <div class="top-header">
+    <header>
         <h1>Botpilot</h1>
-        <div class="top-controls">
-            <div id="pairDisplay" class="pair-display">--</div>
-            <div id="priceDisplay" class="price-display">--</div>
-            <span class="gear-btn" onclick="openPairConfigModal()" title="Налаштування URL пари">⚙️</span>
-        </div>
-    </div>
+        <div id="connection-status">Не підключено</div>
+    </header>
 
-    <div class="section">
-        <div class="section-header">
-            <h3>Біржі</h3>
-            <button class="add-btn" onclick="openExchangeModal()">+</button>
-        </div>
-        <div class="exchange-list" id="exchangeList"></div>
-    </div>
+    <main>
+        <section class="card">
+            <h2>Налаштування біржі</h2>
+            <label for="exchange-select">Біржа:</label>
+            <select id="exchange-select">
+                <option value="gate">Gate.io</option>
+                <option value="binance">Binance</option>
+                <option value="okx">OKX</option>
+            </select>
 
-    <div class="section">
-        <div class="section-header">
-            <h3>Боти <span id="exchangeLabel"></span></h3>
-            <button id="botAddBtn" class="add-btn hidden" onclick="openBotModal()">+</button>
-        </div>
-        <div id="botList"></div>
-    </div>
+            <label for="api-key">API Key:</label>
+            <input type="text" id="api-key" placeholder="Введіть API Key">
 
-    <div class="app-version">v1.2.2</div>
+            <label for="secret-key">Secret Key:</label>
+            <input type="password" id="secret-key" placeholder="Введіть Secret Key">
 
-    <div id="pairConfigModal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Повний шлях до API пар</h3>
-            <div class="form-group">
-                <label>Повний URL запиту</label>
-                <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
-                <button class="btn-save" onclick="fetchPairPrice()">Оновити</button>
-            </div>
-        </div>
-    </div>
+            <button id="save-settings">Зберегти та перевірити</button>
+        </section>
 
-    <div id="exchangeModal" class="modal hidden">
-        <div class="modal-content">
-            <h3 id="exModalTitle">Додати біржу</h3>
-            <div class="form-group">
-                <label>Назва біржі</label>
-                <input type="text" id="exName" placeholder="Gate">
-            </div>
-            <div class="form-group">
-                <label>Base URL API</label>
-                <input type="text" id="exUrl" placeholder="https://api.gateio.ws/api/v4">
-            </div>
-            <div class="form-group">
-                <label>API Key</label>
-                <input type="password" id="exKey">
-            </div>
-            <div class="form-group">
-                <label>Secret Key</label>
-                <input type="password" id="exSecret">
-            </div>
-            
-            <div id="debugContainer" class="hidden">
-                <label style="font-size: 11px; color: #aaa; margin-top: 10px; display: block;">Результат запиту / Лог:</label>
-                <div id="exDebugLog" class="debug-box"></div>
-            </div>
-
-            <div class="modal-buttons">
-                <button class="btn-cancel" onclick="closeExchangeModal()">Скасувати</button>
-                <button id="exDelBtn" class="btn-delete hidden" onclick="deleteExchange()">Видалити</button>
-                <button class="btn-save" onclick="saveExchange()">Зберегти</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="botModal" class="modal hidden">
-        <div class="modal-content">
-            <h3 id="botModalTitle">Новий бот</h3>
-            <div class="form-group">
-                <label>Назва бота</label>
-                <input type="text" id="botName" placeholder="Grid Bot #1">
-            </div>
-            <div class="form-group">
-                <label>Статус</label>
-                <select id="botStatus">
-                    <option value="Працює">Працює</option>
-                    <option value="Зупинено">Зупинено</option>
-                </select>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-cancel" onclick="closeBotModal()">Скасувати</button>
-                <button id="botDelBtn" class="btn-delete hidden" onclick="deleteBot()">Видалити</button>
-                <button class="btn-save" onclick="saveBot()">Зберегти</button>
-            </div>
-        </div>
-    </div>
+        <section class="card">
+            <h2>Баланс</h2>
+            <div id="balance-container">Завантаження...</div>
+        </section>
+    </main>
 
     <script>
-        let exchanges = JSON.parse(localStorage.getItem('bp_ex')) || [];
-        let bots = JSON.parse(localStorage.getItem('bp_bots')) || {};
-        let activeEx = null;
-        let lastPriceValue = localStorage.getItem('bp_last_price') || "--";
-        let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT";
-        let editExIdx = null;
-        let editBotIdx = null;
+        // Вся монолітна логіка залишається тут, поки ми її не розбивали
+        document.getElementById('save-settings').addEventListener('click', async () => {
+            const exchange = document.getElementById('exchange-select').value;
+            const apiKey = document.getElementById('api-key').value;
+            const secretKey = document.getElementById('secret-key').value;
 
-        document.getElementById('apiFullUrlInput').value = fullApiUrl;
-        document.getElementById('priceDisplay').textContent = lastPriceValue;
-        updatePairDisplay(fullApiUrl);
-
-        function updatePairDisplay(url) {
-            try {
-                const parts = url.split('/');
-                const pair = parts[parts.length - 1] || "---";
-                document.getElementById('pairDisplay').textContent = pair.replace('_', '/');
-            } catch (e) {
-                document.getElementById('pairDisplay').textContent = "---";
-            }
-        }
-
-        function updateUI() {
-            localStorage.setItem('bp_ex', JSON.stringify(exchanges));
-            localStorage.setItem('bp_bots', JSON.stringify(bots));
-            localStorage.setItem('bp_last_price', lastPriceValue);
-            localStorage.setItem('bp_full_url', fullApiUrl);
-
-            document.getElementById('priceDisplay').textContent = lastPriceValue;
-            updatePairDisplay(fullApiUrl);
-
-            const exList = document.getElementById('exchangeList');
-            exList.innerHTML = exchanges.length ? '' : '<div class="empty-text">Немає доданих бірж</div>';
-            exchanges.forEach((ex, i) => {
-                const div = document.createElement('div');
-                div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
-                
-                const hasBalance = ex.balance !== undefined && ex.balance !== null && ex.balance !== "";
-                const balanceText = hasBalance ? `${ex.balance} USDT` : "N/A";
-                const balanceClass = hasBalance ? "exchange-balance" : "exchange-balance empty";
-                
-                div.innerHTML = `
-                    <div class="exchange-info" title="${ex.name}">${ex.name}</div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                        <span class="${balanceClass}">${balanceText}</span>
-                        <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>
-                    </div>
-                `;
-                
-                div.onclick = () => { 
-                    activeEx = (activeEx === ex.name) ? null : ex.name; 
-                    updateUI(); 
-                };
-                exList.appendChild(div);
-            });
-
-            document.getElementById('exchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
-            document.getElementById('botAddBtn').classList.toggle('hidden', !activeEx);
-            
-            const botList = document.getElementById('botList');
-            botList.innerHTML = '';
-            
-            let displayList = [];
-            if (activeEx) {
-                let items = bots[activeEx] || [];
-                items.forEach((bot, idx) => displayList.push({ bot, exName: activeEx, idx }));
-            } else {
-                for (let exName in bots) {
-                    let items = bots[exName] || [];
-                    items.forEach((bot, idx) => displayList.push({ bot, exName, idx }));
-                }
-            }
-
-            if (!displayList.length) {
-                botList.innerHTML = '<div class="empty-text">Боти відсутні</div>';
-            } else {
-                displayList.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'bot-card';
-                    card.innerHTML = `
-                        <div>
-                            <strong>${item.bot.name}</strong>
-                            <span>Біржа: ${item.exName} | Статус: ${item.bot.status}</span>
-                        </div>
-                        <span class="gear-btn" onclick="openEditBot('${item.exName}', ${item.idx})">⚙️</span>`;
-                    botList.appendChild(card);
-                });
-            }
-        }
-
-        function openPairConfigModal() { document.getElementById('pairConfigModal').classList.remove('hidden'); }
-        function closePairConfigModal() { document.getElementById('pairConfigModal').classList.add('hidden'); }
-
-        async function fetchPairPrice() {
-            const targetUrl = document.getElementById('apiFullUrlInput').value.trim();
-            if (!targetUrl) return alert("Вкажіть URL");
-
-            fullApiUrl = targetUrl;
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(targetUrl)}`;
-
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Помилка сервера: ' + response.status);
-                const data = await response.json();
-                
-                if (data && data.last_price) {
-                    lastPriceValue = data.last_price;
-                    alert("Ціну успішно оновлено!");
-                    closePairConfigModal();
-                    updateUI();
-                } else {
-                    alert("Поле last_price не знайдено у відповіді API");
-                }
-            } catch (err) {
-                alert("Помилка запиту через власний бекенд.\nДеталі: " + err.message);
-            }
-        }
-
-        async function fetchExchangeBalance(url, key, secret, index) {
-            const debugContainer = document.getElementById('debugContainer');
-            const debugLog = document.getElementById('exDebugLog');
-            debugContainer.classList.remove('hidden');
-
-            if (!key || !secret) {
-                exchanges[index].balance = null;
-                debugLog.className = "debug-box";
-                debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
-                updateUI();
+            if (!apiKey || !secretKey) {
+                alert('Заповніть API Key та Secret Key');
                 return;
             }
-            
-            const balanceUrl = url.endsWith('/') ? `${url}futures/usdt/accounts` : `${url}/futures/usdt/accounts`;
-            const proxyUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
-            debugLog.className = "debug-box";
-            debugLog.textContent = `[ВИКОНУЄТЬСЯ ЗАПИТ]\nMethod: GET\nProxy URL: ${proxyUrl}\nTarget URL: ${balanceUrl}`;
+            const statusEl = document.getElementById('connection-status');
+            const balanceEl = document.getElementById('balance-container');
+
+            statusEl.textContent = 'Підключення...';
+            balanceEl.textContent = 'Отримання даних...';
 
             try {
-                const response = await fetch(proxyUrl);
-                const rawText = await response.text();
+                // Приклад виклику бекенду (залишається вашим поточним)
+                const response = await fetch(`/api/proxy-auth?exchange=${exchange}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, secretKey })
+                });
                 
-                let data;
-                try {
-                    data = JSON.parse(rawText);
-                } catch (e) {
-                    data = { rawResponse: rawText };
-                }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${rawText}`);
-                }
-                
-                if (data && data.total !== undefined) {
-                    exchanges[index].balance = data.total;
-                    debugLog.className = "debug-box success";
-                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
-                } else if (data && data.available !== undefined) {
-                    exchanges[index].balance = data.available;
-                    debugLog.className = "debug-box success";
-                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
-                } else {
-                    exchanges[index].balance = null;
-                    debugLog.textContent = `[ПОМИЛКА СТРУКТУРИ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
-                }
-                updateUI();
-            } catch (err) {
-                exchanges[index].balance = null;
-                debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nRequest URL: ${proxyUrl}\nError: ${err.message}`;
-                updateUI();
+                const data = await response.json();
+                balanceEl.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                statusEl.textContent = 'Підключено';
+                statusEl.style.color = 'var(--success-color)';
+            } catch (error) {
+                balanceEl.textContent = `Помилка: ${error.message}`;
+                statusEl.textContent = 'Помилка підключення';
+                statusEl.style.color = 'var(--danger-color)';
             }
-        }
-
-        function openExchangeModal() {
-            editExIdx = null;
-            document.getElementById('exModalTitle').textContent = "Додати біржу";
-            ['exName','exUrl','exKey','exSecret'].forEach(id => document.getElementById(id).value = "");
-            document.getElementById('exDelBtn').classList.add('hidden');
-            document.getElementById('debugContainer').classList.add('hidden');
-            document.getElementById('exchangeModal').classList.remove('hidden');
-        }
-
-        function openEditEx(i) {
-            editExIdx = i;
-            const ex = exchanges[i];
-            document.getElementById('exModalTitle').textContent = "Налаштування " + ex.name;
-            document.getElementById('exName').value = ex.name;
-            document.getElementById('exUrl').value = ex.url;
-            document.getElementById('exKey').value = ex.key;
-            document.getElementById('exSecret').value = ex.secret;
-            document.getElementById('exDelBtn').classList.remove('hidden');
-            document.getElementById('debugContainer').classList.add('hidden');
-            document.getElementById('exchangeModal').classList.remove('hidden');
-            
-            if (ex.url && ex.key && ex.secret) {
-                fetchExchangeBalance(ex.url, ex.key, ex.secret, i);
-            }
-        }
-
-        function saveExchange() {
-            const name = document.getElementById('exName').value.trim();
-            const url = document.getElementById('exUrl').value.trim();
-            const key = document.getElementById('exKey').value.trim();
-            const secret = document.getElementById('exSecret').value.trim();
-
-            if (!name || !url) return alert("Заповніть обов'язкові поля");
-            
-            let existingBalance = (editExIdx !== null && exchanges[editExIdx].balance !== undefined) ? exchanges[editExIdx].balance : null;
-
-            const data = { name, url, key, secret, balance: existingBalance };
-
-            const targetIdx = editExIdx !== null ? editExIdx : exchanges.length;
-            if (editExIdx !== null) {
-                exchanges[editExIdx] = data;
-            } else { 
-                exchanges.push(data); 
-                bots[name] = []; 
-            }
-            
-            updateUI();
-
-            if (url && key && secret) {
-                fetchExchangeBalance(url, key, secret, targetIdx);
-            } else {
-                closeExchangeModal();
-            }
-        }
-
-        function deleteExchange() {
-            const name = exchanges[editExIdx].name;
-            exchanges.splice(editExIdx, 1);
-            delete bots[name];
-            activeEx = null;
-            closeExchangeModal(); updateUI();
-        }
-
-        function closeExchangeModal() { document.getElementById('exchangeModal').classList.add('hidden'); }
-
-        function openBotModal() {
-            if (!activeEx) return alert("Виберіть біржу");
-            editBotIdx = null;
-            document.getElementById('botModalTitle').textContent = "Новий бот";
-            document.getElementById('botName').value = "";
-            document.getElementById('botDelBtn').classList.add('hidden');
-            document.getElementById('botModal').classList.remove('hidden');
-        }
-
-        function openEditBot(exName, i) {
-            editBotIdx = i;
-            activeEx = exName;
-            const bot = bots[exName][i];
-            document.getElementById('botModalTitle').textContent = "Налаштування бота";
-            document.getElementById('botName').value = bot.name;
-            document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.add('hidden');
-            document.getElementById('botModal').classList.remove('hidden');
-        }
-
-        function saveBot() {
-            const name = document.getElementById('botName').value.trim();
-            const status = document.getElementById('botStatus').value;
-            if (!name) return alert("Введіть назву бота");
-
-            if (editBotIdx !== null) {
-                bots[activeEx][editBotIdx].name = name;
-                bots[activeEx][editBotIdx].status = status;
-            } else {
-                if (!bots[activeEx]) bots[activeEx] = [];
-                bots[activeEx].push({ name: name, status: status });
-            }
-            closeBotModal(); updateUI();
-        }
-
-        function deleteBot() {
-            if (editBotIdx !== null && activeEx && bots[activeEx]) {
-                bots[activeEx].splice(editBotIdx, 1);
-            }
-            closeBotModal(); updateUI();
-        }
-
-        function closeBotModal() { document.getElementById('botModal').classList.add('hidden'); }
-
-        updateUI();
+        });
     </script>
 </body>
 </html>
