@@ -35,16 +35,21 @@
 
     <div class="section">
         <div class="section-header">
-            <h3>Ордери <span id="orderExchangeLabel"></span></h3>
+            <h3>Ф'ючерси <span id="futuresExchangeLabel"></span></h3>
             <select id="contractSelect" class="contract-select" onchange="onContractChange()">
-                <option value="" selected disabled>Виберіть контракт</option>
+                <option value="" selected disabled>Контракт</option>
                 <option value="BTC_USDT">BTC/USDT</option>
                 <option value="XAG_USDT">XAG/USDT</option>
             </select>
         </div>
-        <div id="orderList">
-            <div class="empty-text">Виберіть контракт для завантаження ордерів</div>
+        
+        <div class="futures-tabs">
+            <button class="tab-btn active" onclick="switchFuturesTab('positions')" id="tabPos">Позиції</button>
+            <button class="tab-btn" onclick="switchFuturesTab('orders')" id="tabOrd">Ордери</button>
+            <button class="tab-btn" onclick="switchFuturesTab('history')" id="tabHist">Історія</button>
         </div>
+
+        <div id="futuresContent"></div>
     </div>
 
     <div class="app-version">v1.2.2</div>
@@ -123,6 +128,7 @@
         let bots = JSON.parse(localStorage.getItem('bp_bots')) || {};
         let activeEx = null;
         let selectedContract = localStorage.getItem('bp_selected_contract') || "";
+        let activeFuturesTab = localStorage.getItem('bp_futures_tab') || "positions";
         let lastPriceValue = localStorage.getItem('bp_last_price') || "--";
         let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT";
         let editExIdx = null;
@@ -141,6 +147,18 @@
             } catch (e) {
                 document.getElementById('pairDisplay').textContent = "---";
             }
+        }
+
+        function switchFuturesTab(tabName) {
+            activeFuturesTab = tabName;
+            localStorage.setItem('bp_futures_tab', activeFuturesTab);
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (tabName === 'positions') document.getElementById('tabPos').classList.add('active');
+            if (tabName === 'orders') document.getElementById('tabOrd').classList.add('active');
+            if (tabName === 'history') document.getElementById('tabHist').classList.add('active');
+            
+            updateUI();
         }
 
         function onContractChange() {
@@ -163,12 +181,13 @@
             localStorage.setItem('bp_last_price', lastPriceValue);
             localStorage.setItem('bp_full_url', fullApiUrl);
             localStorage.setItem('bp_selected_contract', selectedContract);
+            localStorage.setItem('bp_futures_tab', activeFuturesTab);
 
             document.getElementById('priceDisplay').textContent = lastPriceValue;
             updatePairDisplay(fullApiUrl);
 
             const exList = document.getElementById('exchangeList');
-            exList.innerHTML = exchanges.length ? '' : '<div class="empty-text">Немає доданих бірж</div>';
+            exList.innerHTML = exchanges.length ? '' : '<div class="empty-text">Немає доданих біржах</div>';
             exchanges.forEach((ex, i) => {
                 const div = document.createElement('div');
                 div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
@@ -193,7 +212,7 @@
             });
 
             document.getElementById('exchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
-            document.getElementById('orderExchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
+            document.getElementById('futuresExchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
             document.getElementById('botAddBtn').classList.toggle('hidden', !activeEx);
             
             // Рендер ботів
@@ -227,35 +246,79 @@
                 });
             }
 
-            // Рендер ордерів
-            const orderList = document.getElementById('orderList');
-            orderList.innerHTML = '';
+            // Рендер модуля Ф'ючерси (відповідно до активної вкладки)
+            const futuresContent = document.getElementById('futuresContent');
+            futuresContent.innerHTML = '';
 
             if (!activeEx) {
-                orderList.innerHTML = '<div class="empty-text">Виберіть біржу для перегляду ордерів</div>';
-            } else if (!selectedContract) {
-                orderList.innerHTML = '<div class="empty-text">Виберіть контракт для завантаження ордерів</div>';
-            } else {
-                const currentExObj = exchanges.find(e => e.name === activeEx);
-                if (!currentExObj || !currentExObj.orders || currentExObj.orders.length === 0) {
-                    orderList.innerHTML = '<div class="empty-text">Активні ордери відсутні</div>';
+                futuresContent.innerHTML = '<div class="empty-text">Виберіть біржу для перегляду ф\'ючерсів</div>';
+                return;
+            }
+
+            const currentExObj = exchanges.find(e => e.name === activeEx);
+
+            if (activeFuturesTab === 'positions') {
+                if (!currentExObj || !currentExObj.positions || currentExObj.positions.length === 0) {
+                    futuresContent.innerHTML = '<div class="empty-text">Активні позиції відсутні</div>';
                 } else {
-                    currentExObj.orders.forEach(order => {
+                    currentExObj.positions.forEach(pos => {
                         const card = document.createElement('div');
-                        card.className = 'order-card';
-                        
+                        card.className = 'futures-card';
+                        const isLong = pos.size > 0;
+                        card.innerHTML = `
+                            <div>
+                                <strong>${pos.contract}</strong>
+                                <span class="${isLong ? 'badge-long' : 'badge-short'}">${isLong ? 'LONG' : 'SHORT'} | Розмір: ${pos.size}</span>
+                                <span>Вхід: ${pos.entry_price} | Марка: ${pos.mark_price || '--'} | PnL: ${pos.pnl || '0'} USDT</span>
+                            </div>
+                            <button class="btn-small">Закрити</button>
+                        `;
+                        futuresContent.appendChild(card);
+                    });
+                }
+            } else if (activeFuturesTab === 'orders') {
+                if (!selectedContract) {
+                    futuresContent.innerHTML = '<div class="empty-text">Виберіть контракт для завантаження ордерів</div>';
+                } else if (!currentExObj || !currentExObj.orders || currentExObj.orders.length === 0) {
+                    futuresContent.innerHTML = '<div class="empty-text">Поточні ордери відсутні</div>';
+                } else {
+                    let htmlHeader = `
+                        <div class="futures-actions-bar">
+                            <span style="font-size: 12px; color: #888;">Всього: ${currentExObj.orders.length}</span>
+                            <button class="btn-danger-small" onclick="cancelAllOrders()">Скасувати всі</button>
+                        </div>`;
+                    let ordersHtml = '';
+                    currentExObj.orders.forEach((order, idx) => {
                         const contract = order.contract || selectedContract;
                         const price = order.price || "---";
                         const size = order.size || "---";
                         const text = order.text || order.id || "Без ID";
 
+                        ordersHtml += `
+                            <div class="futures-card">
+                                <div>
+                                    <strong>${contract}</strong>
+                                    <span>Ціна: ${price} | Кількість: ${size} | ID: ${text}</span>
+                                </div>
+                                <button class="btn-danger-small" onclick="cancelSingleOrder('${order.id}')">Скасувати</button>
+                            </div>`;
+                    });
+                    futuresContent.innerHTML = htmlHeader + ordersHtml;
+                }
+            } else if (activeFuturesTab === 'history') {
+                if (!currentExObj || !currentExObj.history || currentExObj.history.length === 0) {
+                    futuresContent.innerHTML = '<div class="empty-text">Історія ордерів та угод відсутня</div>';
+                } else {
+                    currentExObj.history.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'futures-card';
                         card.innerHTML = `
                             <div>
-                                <strong>${contract}</strong>
-                                <span>Ціна: ${price} | Кількість: ${size} | ID: ${text}</span>
+                                <strong>${item.contract || '--'}</strong>
+                                <span>Тип: ${item.type || 'Архів'} | Ціна: ${item.price || '--'} | Статус: ${item.status || 'Виконано'}</span>
                             </div>
                         `;
-                        orderList.appendChild(card);
+                        futuresContent.appendChild(card);
                     });
                 }
             }
@@ -297,6 +360,8 @@
             if (!key || !secret) {
                 exchanges[index].balance = null;
                 exchanges[index].orders = [];
+                exchanges[index].positions = [];
+                exchanges[index].history = [];
                 debugLog.className = "debug-box";
                 debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
                 updateUI();
@@ -305,16 +370,19 @@
             
             const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
             const balanceUrl = `${cleanUrl}/futures/usdt/accounts`;
-            
+            const positionsUrl = `${cleanUrl}/futures/usdt/positions`;
+            const historyUrl = `${cleanUrl}/futures/usdt/orders?status=finished`;
+
             const proxyBalanceUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+            const proxyPositionsUrl = `/api/proxy-auth?url=${encodeURIComponent(positionsUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+            const proxyHistoryUrl = `/api/proxy-auth?url=${encodeURIComponent(historyUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
             debugLog.className = "debug-box";
-            debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nОтримання балансу та ордерів...`;
+            debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nОтримання даних ф'ючерсів...`;
 
             try {
-                let requests = [fetch(proxyBalanceUrl)];
+                let requests = [fetch(proxyBalanceUrl), fetch(proxyPositionsUrl), fetch(proxyHistoryUrl)];
                 
-                // Якщо обрано контракт, додаємо запит ордерів для нього
                 if (selectedContract) {
                     const ordersUrl = `${cleanUrl}/futures/usdt/orders?status=open&contract=${selectedContract}`;
                     const proxyOrdersUrl = `/api/proxy-auth?url=${encodeURIComponent(ordersUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
@@ -322,14 +390,16 @@
                 }
 
                 const responses = await Promise.all(requests);
-                const balRes = responses[0];
-                const balRaw = await balRes.text();
-
-                let balData;
-                try { balData = JSON.parse(balRaw); } catch(e) { balData = { rawResponse: balRaw }; }
-
-                if (!balRes.ok) throw new Error(`Balance HTTP ${balRes.status}: ${balRaw}`);
                 
+                const balRaw = await responses[0].text();
+                const posRaw = await responses[1].text();
+                const histRaw = await responses[2].text();
+
+                let balData, posData, histData;
+                try { balData = JSON.parse(balRaw); } catch(e) { balData = {}; }
+                try { posData = JSON.parse(posRaw); } catch(e) { posData = []; }
+                try { histData = JSON.parse(histRaw); } catch(e) { histData = []; }
+
                 if (balData && balData.total !== undefined) {
                     exchanges[index].balance = balData.total;
                 } else if (balData && balData.available !== undefined) {
@@ -338,29 +408,42 @@
                     exchanges[index].balance = null;
                 }
 
-                if (responses.length > 1) {
-                    const ordRes = responses[1];
-                    const ordRaw = await ordRes.text();
-                    let ordData;
-                    try { ordData = JSON.parse(ordRaw); } catch(e) { ordData = { rawResponse: ordRaw }; }
+                exchanges[index].positions = Array.isArray(posData) ? posData.filter(p => Number(p.size) !== 0) : [];
+                exchanges[index].history = Array.isArray(histData) ? histData : [];
 
-                    if (Array.isArray(ordData)) {
-                        exchanges[index].orders = ordData;
-                    } else {
-                        exchanges[index].orders = [];
-                    }
+                if (responses.length > 3) {
+                    const ordRaw = await responses[3].text();
+                    let ordData;
+                    try { ordData = JSON.parse(ordRaw); } catch(e) { ordData = []; }
+                    exchanges[index].orders = Array.isArray(ordData) ? ordData : [];
                 } else {
                     exchanges[index].orders = [];
                 }
 
                 debugLog.className = "debug-box success";
-                debugLog.textContent = `[УСПІХ]\nБаланс: ${exchanges[index].balance}\nОрдерів для ${selectedContract || 'не вибрано'}: ${exchanges[index].orders.length}`;
+                debugLog.textContent = `[УСПІХ]\nБаланс: ${exchanges[index].balance}\nПозицій: ${exchanges[index].positions.length}\nОрдерів: ${exchanges[index].orders.length}`;
                 updateUI();
             } catch (err) {
                 exchanges[index].balance = null;
                 exchanges[index].orders = [];
+                exchanges[index].positions = [];
+                exchanges[index].history = [];
                 debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nError: ${err.message}`;
                 updateUI();
+            }
+        }
+
+        function cancelSingleOrder(orderId) {
+            alert("Функція скасування ордера " + orderId + " в розробці");
+        }
+
+        function cancelAllOrders() {
+            if (!activeEx) return;
+            const exObj = exchanges.find(e => e.name === activeEx);
+            if (exObj) {
+                exObj.orders = [];
+                updateUI();
+                alert("Усі поточні ордери скасовано");
             }
         }
 
@@ -400,8 +483,10 @@
             
             let existingBalance = (editExIdx !== null && exchanges[editExIdx].balance !== undefined) ? exchanges[editExIdx].balance : null;
             let existingOrders = (editExIdx !== null && exchanges[editExIdx].orders !== undefined) ? exchanges[editExIdx].orders : [];
+            let existingPositions = (editExIdx !== null && exchanges[editExIdx].positions !== undefined) ? exchanges[editExIdx].positions : [];
+            let existingHistory = (editExIdx !== null && exchanges[editExIdx].history !== undefined) ? exchanges[editExIdx].history : [];
 
-            const data = { name, url, key, secret, balance: existingBalance, orders: existingOrders };
+            const data = { name, url, key, secret, balance: existingBalance, orders: existingOrders, positions: existingPositions, history: existingHistory };
 
             const targetIdx = editExIdx !== null ? editExIdx : exchanges.length;
             if (editExIdx !== null) {
