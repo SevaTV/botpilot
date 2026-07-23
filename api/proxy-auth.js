@@ -14,14 +14,16 @@ export default async function handler(req, res) {
         const query = parsedUrl.search.replace('?', '');
         const timestamp = Math.floor(Date.now() / 1000).toString();
 
-        const method = 'GET';
-        const hashedPayload = crypto.createHash('sha512').update('').digest('hex');
+        const method = req.method || 'GET';
+        // Якщо передається тіло запиту (POST), його потрібно враховувати у підписі, для GET залишаємо пустим
+        const payload = req.body ? JSON.stringify(req.body) : '';
+        const hashedPayload = crypto.createHash('sha512').update(payload).digest('hex');
         
         const signString = `${method}\n${path}\n${query}\n${hashedPayload}\n${timestamp}`;
         const sign = crypto.createHmac('sha512', secret).update(signString).digest('hex');
 
-        const response = await fetch(url, {
-            method: 'GET',
+        const fetchOptions = {
+            method: method,
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -29,8 +31,13 @@ export default async function handler(req, res) {
                 'SIGN': sign,
                 'Timestamp': timestamp
             }
-        });
+        };
 
+        if (method === 'POST' && req.body) {
+            fetchOptions.body = payload;
+        }
+
+        const response = await fetch(url, fetchOptions);
         const data = await response.json();
         return res.status(response.status).json(data);
     } catch (error) {
