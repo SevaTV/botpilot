@@ -1,82 +1,305 @@
-:root {
-    --bg-color: #0f172a;
-    --card-bg: #1e293b;
-    --text-color: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent-color: #3b82f6;
-    --accent-hover: #2563eb;
-    --border-color: #334155;
-    --success-color: #22c55e;
-    --danger-color: #ef4444;
+body { 
+    font-family: sans-serif; 
+    background: #121212; 
+    color: #fff; 
+    padding: 15px; 
+    margin: 0; 
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+.top-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 15px; 
 }
 
-body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+h1 { 
+    color: #00ffcc; 
+    font-size: 22px; 
+    margin: 0; 
 }
 
-header {
-    background-color: var(--card-bg);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.top-controls { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
 }
 
-h1, h2, h3 {
-    font-weight: 600;
+.pair-display { 
+    background: #1e1e1e; 
+    border: 1px solid #444; 
+    color: #ccc; 
+    padding: 6px 10px; 
+    border-radius: 6px; 
+    font-size: 13px; 
+    font-weight: bold; 
 }
 
-main {
-    flex: 1;
-    padding: 2rem;
-    max-width: 1200px;
-    width: 100%;
-    margin: 0 auto;
-    display: grid;
-    gap: 1.5rem;
+.price-display { 
+    background: #1e1e1e; 
+    border: 1px solid #444; 
+    color: #00ffcc; 
+    padding: 6px 12px; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    font-weight: bold; 
 }
 
-.card {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
+.gear-btn { 
+    cursor: pointer; 
+    font-size: 18px; 
+    opacity: 0.8; 
+    transition: 0.2s; 
 }
 
-button {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 0.5rem 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.gear-btn:hover { 
+    opacity: 1; 
+    color: #00ffcc; 
 }
 
-button:hover {
-    background-color: var(--accent-hover);
+.section { 
+    background: #1e1e1e; 
+    padding: 15px; 
+    border-radius: 10px; 
+    margin-bottom: 15px; 
 }
 
-input, select {
-    background-color: var(--bg-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 0.5rem;
-    border-radius: 4px;
-    width: 100%;
-    margin-top: 0.25rem;
-    margin-bottom: 1rem;
+.section-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+}
+
+.section-header h3 { 
+    margin: 0; 
+    font-size: 16px; 
+    color: #ccc; 
+}
+
+.add-btn { 
+    background: #00ffcc; 
+    color: #000; 
+    border: none; 
+    width: 30px; 
+    height: 30px; 
+    font-weight: bold; 
+    border-radius: 50%; 
+    cursor: pointer; 
+    font-size: 18px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+
+.hidden { 
+    display: none; 
+}
+
+.exchange-list { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+}
+
+.exchange-chip { 
+    background: #2a2a2a; 
+    border: 1px solid #444; 
+    padding: 10px 14px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 14px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: flex-start; 
+    gap: 10px; 
+}
+
+.exchange-chip.active { 
+    background: #00ffcc; 
+    color: #000; 
+    border-color: #00ffcc; 
+    font-weight: bold; 
+}
+
+.exchange-balance { 
+    font-size: 11px; 
+    background: rgba(0,0,0,0.3); 
+    padding: 3px 8px; 
+    border-radius: 4px; 
+    color: #00ffcc; 
+    white-space: nowrap; 
+    flex-shrink: 0; 
+}
+
+.exchange-balance.empty { 
+    background: rgba(255, 85, 85, 0.2); 
+    color: #ff5555; 
+    border: 1px solid #ff5555; 
+}
+
+.exchange-chip.active .exchange-balance { 
+    background: #000; 
+    color: #00ffcc; 
+}
+
+.exchange-chip.active .exchange-balance.empty { 
+    background: #000; 
+    color: #ff5555; 
+    border-color: #ff5555; 
+}
+
+.exchange-info { 
+    min-width: 0; 
+    flex-grow: 1; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    padding-top: 2px; 
+}
+
+.settings-icon { 
+    font-size: 14px; 
+    opacity: 0.6; 
+    cursor: pointer; 
+    flex-shrink: 0; 
+    margin-top: 2px; 
+}
+
+.bot-card { 
+    background: #2a2a2a; 
+    padding: 10px 12px; 
+    border-radius: 6px; 
+    margin-bottom: 8px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+
+.bot-card span { 
+    font-size: 12px; 
+    color: #888; 
+    display: block; 
+    margin-top: 2px; 
+}
+
+.empty-text { 
+    color: #666; 
+    font-size: 14px; 
+    text-align: center; 
+    padding: 10px; 
+}
+
+.modal { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.85); 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 999; 
+}
+
+.modal.hidden { 
+    display: none !important; 
+}
+
+.modal-content { 
+    background: #1e1e1e; 
+    padding: 20px; 
+    border-radius: 12px; 
+    width: 90%; 
+    max-width: 400px; 
+    border: 1px solid #333; 
+    box-sizing: border-box; 
+    max-height: 90vh; 
+    overflow-y: auto; 
+}
+
+.modal-content h3 { 
+    margin-top: 0; 
+    color: #00ffcc; 
+    font-size: 18px; 
+}
+
+.form-group { 
+    margin-bottom: 12px; 
+}
+
+.form-group label { 
+    display: block; 
+    font-size: 12px; 
+    color: #aaa; 
+    margin-bottom: 4px; 
+}
+
+.form-group input, .form-group select { 
+    width: 100%; 
+    background: #2a2a2a; 
+    border: 1px solid #444; 
+    color: #fff; 
+    padding: 10px; 
+    border-radius: 6px; 
+    box-sizing: border-box; 
+    outline: none; 
+}
+
+.debug-box { 
+    background: #111; 
+    border: 1px solid #ff5555; 
+    padding: 8px; 
+    border-radius: 6px; 
+    font-size: 11px; 
+    color: #ff8888; 
+    margin-top: 10px; 
+    white-space: pre-wrap; 
+    word-break: break-all; 
+    max-height: 140px; 
+    overflow-y: auto; 
+}
+
+.debug-box.success { 
+    border-color: #00ffcc; 
+    color: #00ffcc; 
+}
+
+.modal-buttons { 
+    display: flex; 
+    gap: 10px; 
+    margin-top: 20px; 
+}
+
+.modal-buttons button { 
+    flex: 1; 
+    padding: 10px; 
+    border: none; 
+    border-radius: 6px; 
+    font-weight: bold; 
+    cursor: pointer; 
+}
+
+.btn-save { 
+    background: #00ffcc; 
+    color: #000; 
+}
+
+.btn-cancel { 
+    background: #333; 
+    color: #fff; 
+}
+
+.btn-delete { 
+    background: #ff5555; 
+    color: #fff; 
+}
+
+.app-version { 
+    font-size: 10px; 
+    color: #444; 
+    text-align: center; 
+    margin-top: 20px; 
+    user-select: none; 
 }
