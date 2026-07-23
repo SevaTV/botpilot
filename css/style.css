@@ -206,18 +206,19 @@ h1 {
 .pos-header-left {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
 }
 
 .pos-header-left strong {
     font-size: 14px;
+    margin-right: 2px;
 }
 
-/* Зменшені міні-бейджи (в половину висоти напису) з рамками */
+/* Шрифт 4px та мінімальні відступи */
 .pos-badge-tag {
     font-size: 4px;
-    padding: 1px 4px;
-    border-radius: 3px;
+    padding: 0.5px 2px;
+    border-radius: 2px;
     border: 1px solid #444;
     font-weight: 600;
     line-height: 1;
@@ -241,11 +242,11 @@ h1 {
 }
 
 .pos-leverage {
-    font-size: 8.5px;
+    font-size: 4px;
     background: #1e1e1e;
     color: #00ffcc;
-    padding: 1px 4px;
-    border-radius: 3px;
+    padding: 0.5px 2px;
+    border-radius: 2px;
     border: 1px solid #444;
     font-weight: 600;
     line-height: 1;
