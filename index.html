@@ -24,12 +24,12 @@
         .hidden { display: none; }
         
         .exchange-list { display: flex; flex-direction: column; gap: 8px; }
-        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
-        .exchange-balance { font-size: 11px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #00ffcc; }
+        .exchange-balance { font-size: 11px; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; color: #00ffcc; white-space: nowrap; float: right; margin-left: 8px; margin-bottom: 4px; }
         .exchange-chip.active .exchange-balance { background: #000; color: #00ffcc; }
-        .exchange-info { display: flex; align-items: center; gap: 10px; }
-        .settings-icon { font-size: 14px; opacity: 0.6; cursor: pointer; }
+        .exchange-info { min-width: 0; flex-grow: 1; word-break: break-all; }
+        .settings-icon { font-size: 14px; opacity: 0.6; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
 
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
         .bot-card span { font-size: 12px; color: #888; display: block; margin-top: 2px; }
@@ -79,7 +79,7 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.1.5</div>
+    <div class="app-version">v1.1.7</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -186,8 +186,8 @@
                 
                 div.innerHTML = `
                     <div class="exchange-info">
-                        <span>${ex.name}</span>
                         <span class="exchange-balance">${balanceText}</span>
+                        <span>${ex.name}</span>
                     </div>
                     <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>
                 `;
