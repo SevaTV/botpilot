@@ -215,7 +215,7 @@ h1 {
 
 /* Зменшені міні-бейджи (в половину висоти напису) з рамками */
 .pos-badge-tag {
-    font-size: 8.5px;
+    font-size: 4px;
     padding: 1px 4px;
     border-radius: 3px;
     border: 1px solid #444;
