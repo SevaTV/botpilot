@@ -33,7 +33,16 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.2.3</div>
+    <div class="section">
+        <div class="section-header">
+            <h3>Ордери <span id="orderExchangeLabel"></span></h3>
+        </div>
+        <div id="orderList">
+            <div class="empty-text">Виберіть біржу для перегляду ордерів</div>
+        </div>
+    </div>
+
+    <div class="app-version">v1.2.2</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -162,8 +171,10 @@
             });
 
             document.getElementById('exchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
+            document.getElementById('orderExchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
             document.getElementById('botAddBtn').classList.toggle('hidden', !activeEx);
             
+            // Рендер ботів
             const botList = document.getElementById('botList');
             botList.innerHTML = '';
             
@@ -192,6 +203,37 @@
                         <span class="gear-btn" onclick="openEditBot('${item.exName}', ${item.idx})">⚙️</span>`;
                     botList.appendChild(card);
                 });
+            }
+
+            // Рендер ордерів
+            const orderList = document.getElementById('orderList');
+            orderList.innerHTML = '';
+
+            if (!activeEx) {
+                orderList.innerHTML = '<div class="empty-text">Виберіть біржу для перегляду ордерів</div>';
+            } else {
+                const currentExObj = exchanges.find(e => e.name === activeEx);
+                if (!currentExObj || !currentExObj.orders || currentExObj.orders.length === 0) {
+                    orderList.innerHTML = '<div class="empty-text">Активні ордери відсутні</div>';
+                } else {
+                    currentExObj.orders.forEach(order => {
+                        const card = document.createElement('div');
+                        card.className = 'order-card';
+                        
+                        const contract = order.contract || "---";
+                        const price = order.price || "---";
+                        const size = order.size || "---";
+                        const text = order.text || order.id || "Без ID";
+
+                        card.innerHTML = `
+                            <div>
+                                <strong>${contract}</strong>
+                                <span>Ціна: ${price} | Кількість: ${size} | ID: ${text}</span>
+                            </div>
+                        `;
+                        orderList.appendChild(card);
+                    });
+                }
             }
         }
 
@@ -223,56 +265,69 @@
             }
         }
 
-        async function fetchExchangeBalance(url, key, secret, index) {
+        async function fetchExchangeData(url, key, secret, index) {
             const debugContainer = document.getElementById('debugContainer');
             const debugLog = document.getElementById('exDebugLog');
             debugContainer.classList.remove('hidden');
 
             if (!key || !secret) {
                 exchanges[index].balance = null;
+                exchanges[index].orders = [];
                 debugLog.className = "debug-box";
                 debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
                 updateUI();
                 return;
             }
             
-            const balanceUrl = url.endsWith('/') ? `${url}futures/usdt/accounts` : `${url}/futures/usdt/accounts`;
-            const proxyUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+            const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+            const balanceUrl = `${cleanUrl}/futures/usdt/accounts`;
+            const ordersUrl = `${cleanUrl}/futures/usdt/orders?status=open`;
+
+            const proxyBalanceUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+            const proxyOrdersUrl = `/api/proxy-auth?url=${encodeURIComponent(ordersUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
             debugLog.className = "debug-box";
-            debugLog.textContent = `[ВИКОНУЄТЬСЯ ЗАПИТ]\nMethod: GET\nProxy URL: ${proxyUrl}\nTarget URL: ${balanceUrl}`;
+            debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nБаланс та Ордери...`;
 
             try {
-                const response = await fetch(proxyUrl);
-                const rawText = await response.text();
-                
-                let data;
-                try {
-                    data = JSON.parse(rawText);
-                } catch (e) {
-                    data = { rawResponse: rawText };
-                }
+                // Отримуємо баланс та ордери паралельно
+                const [balRes, ordRes] = await Promise.all([
+                    fetch(proxyBalanceUrl),
+                    fetch(proxyOrdersUrl)
+                ]);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${rawText}`);
-                }
+                const balRaw = await balRes.text();
+                const ordRaw = await ordRes.text();
+
+                let balData, ordData;
+                try { balData = JSON.parse(balRaw); } catch(e) { balData = { rawResponse: balRaw }; }
+                try { ordData = JSON.parse(ordRaw); } catch(e) { ordData = { rawResponse: ordRaw }; }
+
+                if (!balRes.ok) throw new Error(`Balance HTTP ${balRes.status}: ${balRaw}`);
                 
-                if (data && data.total !== undefined) {
-                    exchanges[index].balance = data.total;
-                    debugLog.className = "debug-box success";
-                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
-                } else if (data && data.available !== undefined) {
-                    exchanges[index].balance = data.available;
-                    debugLog.className = "debug-box success";
-                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                // Обробка балансу
+                if (balData && balData.total !== undefined) {
+                    exchanges[index].balance = balData.total;
+                } else if (balData && balData.available !== undefined) {
+                    exchanges[index].balance = balData.available;
                 } else {
                     exchanges[index].balance = null;
-                    debugLog.textContent = `[ПОМИЛКА СТРУКТУРИ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
                 }
+
+                // Обробка ордерів (Gate.io зазвичай повертає масив активних ордерів)
+                if (Array.isArray(ordData)) {
+                    exchanges[index].orders = ordData;
+                } else {
+                    exchanges[index].orders = [];
+                }
+
+                debugLog.className = "debug-box success";
+                debugLog.textContent = `[УСПІХ]\nБаланс: ${exchanges[index].balance}\nЗнайдено ордерів: ${exchanges[index].orders.length}`;
                 updateUI();
             } catch (err) {
                 exchanges[index].balance = null;
-                debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nRequest URL: ${proxyUrl}\nError: ${err.message}`;
+                exchanges[index].orders = [];
+                debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nError: ${err.message}`;
                 updateUI();
             }
         }
@@ -299,7 +354,7 @@
             document.getElementById('exchangeModal').classList.remove('hidden');
             
             if (ex.url && ex.key && ex.secret) {
-                fetchExchangeBalance(ex.url, ex.key, ex.secret, i);
+                fetchExchangeData(ex.url, ex.key, ex.secret, i);
             }
         }
 
@@ -312,8 +367,9 @@
             if (!name || !url) return alert("Заповніть обов'язкові поля");
             
             let existingBalance = (editExIdx !== null && exchanges[editExIdx].balance !== undefined) ? exchanges[editExIdx].balance : null;
+            let existingOrders = (editExIdx !== null && exchanges[editExIdx].orders !== undefined) ? exchanges[editExIdx].orders : [];
 
-            const data = { name, url, key, secret, balance: existingBalance };
+            const data = { name, url, key, secret, balance: existingBalance, orders: existingOrders };
 
             const targetIdx = editExIdx !== null ? editExIdx : exchanges.length;
             if (editExIdx !== null) {
@@ -326,7 +382,7 @@
             updateUI();
 
             if (url && key && secret) {
-                fetchExchangeBalance(url, key, secret, targetIdx);
+                fetchExchangeData(url, key, secret, targetIdx);
             } else {
                 closeExchangeModal();
             }
@@ -379,6 +435,7 @@
 
         function deleteBot() {
             if (editBotIdx !== null && activeEx && bots[activeEx]) {
+                bots[activeEx][editBotIdx] = null; // або splice
                 bots[activeEx].splice(editBotIdx, 1);
             }
             closeBotModal(); updateUI();
