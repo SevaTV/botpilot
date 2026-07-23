@@ -5,6 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Botpilot</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .pos-styled {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #181c24;
+            border: 1px solid #2a313d;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .pos-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #222834;
+            padding-bottom: 8px;
+        }
+        .pos-leverage {
+            font-size: 11px;
+            background: #252d3d;
+            color: #88c0ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .pos-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .pos-stat-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pos-stat-label {
+            color: #778092;
+        }
+        .pos-stat-value {
+            color: #fff;
+            font-weight: 600;
+        }
+        .pos-stat-value.big {
+            font-size: 14px;
+        }
+        .pnl-pct {
+            font-size: 11px;
+            font-weight: normal;
+        }
+        .pos-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+    </style>
 </head>
 <body>
 
@@ -52,7 +108,7 @@
         <div id="futuresContent"></div>
     </div>
 
-    <div class="app-version">v1.2.3</div>
+    <div class="app-version">v1.2.4</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -246,7 +302,7 @@
                 });
             }
 
-            // Рендер модуля Ф'ючерси з дебаг-логами у вкладках
+            // Рендер модуля Ф'ючерси
             const futuresContent = document.getElementById('futuresContent');
             futuresContent.innerHTML = '';
 
@@ -267,15 +323,57 @@
                 } else {
                     currentExObj.positions.forEach(pos => {
                         const card = document.createElement('div');
-                        card.className = 'futures-card';
+                        card.className = 'pos-styled';
                         const isLong = Number(pos.size) > 0;
+                        const pnl = pos.unrealised_pnl || pos.pnl || '0.00';
+                        const pnlColor = Number(pnl) >= 0 ? 'color: #00ffcc;' : 'color: #ff5555;';
+                        const pnlPct = pos.pnl_pct ? `(${pos.pnl_pct}%)` : '';
+
+                        const entryPrice = pos.entry_price ? Number(pos.entry_price).toFixed(2) : "--";
+                        const markPrice = pos.mark_price ? Number(pos.mark_price).toFixed(2) : "--";
+                        const liqPrice = pos.liq_price ? Number(pos.liq_price).toFixed(2) : "--";
+                        const leverage = pos.leverage ? `${pos.leverage}x` : "--x";
+                        const margin = pos.margin ? Number(pos.margin).toFixed(2) : "0.00";
+                        const size = pos.size ? Math.abs(Number(pos.size)).toFixed(2) : "0.00";
+
                         card.innerHTML = `
-                            <div>
-                                <strong>${pos.contract || selectedContract}</strong>
-                                <span class="${isLong ? 'badge-long' : 'badge-short'}">${isLong ? 'LONG' : 'SHORT'} | Розмір: ${pos.size}</span>
-                                <span>Вхід: ${pos.entry_price || '--'} | Марка: ${pos.mark_price || '--'} | PnL: ${pos.unrealised_pnl || pos.pnl || '0'} USDT</span>
+                            <div class="pos-header">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <strong>${pos.contract || selectedContract}</strong>
+                                    <span class="${isLong ? 'badge-long' : 'badge-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
+                                    <span class="pos-leverage">${leverage}</span>
+                                </div>
+                                <span style="font-size: 10px; color: #888;">Розмір: <span style="color:#fff">${size}</span></span>
                             </div>
-                            <button class="btn-small">Закрити</button>
+                            
+                            <div class="pos-stats-grid">
+                                <div class="pos-stat-box">
+                                    <div class="pos-stat-label">Нереалізований PnL</div>
+                                    <div class="pos-stat-value big" style="${pnlColor}">${Number(pnl).toFixed(2)} <span class="pnl-pct">${pnlPct}</span></div>
+                                </div>
+                                <div class="pos-stat-box" style="text-align: right;">
+                                    <div class="pos-stat-label">Маржа (USDT)</div>
+                                    <div class="pos-stat-value">${margin}</div>
+                                </div>
+                                
+                                <div class="pos-stat-box">
+                                    <div class="pos-stat-label">Ціна входу</div>
+                                    <div class="pos-stat-value">${entryPrice}</div>
+                                </div>
+                                <div class="pos-stat-box" style="text-align: center;">
+                                    <div class="pos-stat-label">Маркування</div>
+                                    <div class="pos-stat-value">${markPrice}</div>
+                                </div>
+                                <div class="pos-stat-box" style="text-align: right;">
+                                    <div class="pos-stat-label">Ліквідація</div>
+                                    <div class="pos-stat-value" style="color: #ffaa33;">${liqPrice}</div>
+                                </div>
+                            </div>
+
+                            <div class="pos-actions">
+                                <button class="btn-cancel" style="flex:1;" onclick="closePosition('${pos.contract}')">Закрити</button>
+                                <button class="btn-small" style="flex:1;" onclick="openTpSlModal('${pos.contract}')">TP/SL</button>
+                            </div>
                         `;
                         futuresContent.appendChild(card);
                     });
@@ -501,6 +599,14 @@
                 updateUI();
                 alert("Усі поточні ордери скасовано");
             }
+        }
+
+        function closePosition(contract) {
+            alert("Закриття позиції для " + contract + " в розробці");
+        }
+
+        function openTpSlModal(contract) {
+            alert("Налаштування TP/SL для " + contract + " в розробці");
         }
 
         function openExchangeModal() {
