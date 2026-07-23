@@ -300,6 +300,33 @@ h1 {
     border: none;
 }
 
+/* Лог відповіді методу під кнопками */
+.pos-method-log {
+    background: #121212;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 4px;
+}
+
+.pos-method-log-title {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: bold;
+}
+
+.pos-method-log pre {
+    margin: 0;
+    font-size: 10px;
+    color: #00ffcc;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
 .empty-text { 
     color: #666; 
     font-size: 14px; 
