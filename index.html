@@ -41,12 +41,15 @@
 
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 999; }
         .modal.hidden { display: none !important; }
-        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; box-sizing: border-box; }
+        .modal-content { background: #1e1e1e; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; box-sizing: border-box; max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { margin-top: 0; color: #00ffcc; font-size: 18px; }
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .form-group input, .form-group select { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; outline: none; }
         
+        .debug-box { background: #111; border: 1px solid #ff5555; padding: 8px; border-radius: 6px; font-size: 11px; color: #ff8888; margin-top: 10px; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; }
+        .debug-box.success { border-color: #00ffcc; color: #00ffcc; }
+
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
         .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-save { background: #00ffcc; color: #000; }
@@ -83,7 +86,7 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.2.0</div>
+    <div class="app-version">v1.2.1</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -92,7 +95,6 @@
                 <label>Повний URL запиту</label>
                 <input type="text" id="apiFullUrlInput" placeholder="https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT">
             </div>
-            <p style="font-size: 11px; color: #777; margin-bottom: 0;">Адреса контракту біржі.</p>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closePairConfigModal()">Закрити</button>
                 <button class="btn-save" onclick="fetchPairPrice()">Оновити</button>
@@ -119,6 +121,12 @@
                 <label>Secret Key</label>
                 <input type="password" id="exSecret">
             </div>
+            
+            <div id="debugContainer" class="hidden">
+                <label style="font-size: 11px; color: #aaa; margin-top: 10px; display: block;">Результат запиту / Лог:</label>
+                <div id="exDebugLog" class="debug-box"></div>
+            </div>
+
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closeExchangeModal()">Скасувати</button>
                 <button id="exDelBtn" class="btn-delete hidden" onclick="deleteExchange()">Видалити</button>
@@ -269,8 +277,14 @@
         }
 
         async function fetchExchangeBalance(url, key, secret, index) {
+            const debugContainer = document.getElementById('debugContainer');
+            const debugLog = document.getElementById('exDebugLog');
+            debugContainer.classList.remove('hidden');
+
             if (!key || !secret) {
                 exchanges[index].balance = null;
+                debugLog.className = "debug-box";
+                debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
                 updateUI();
                 return;
             }
@@ -278,21 +292,40 @@
             const balanceUrl = url.endsWith('/') ? `${url}futures/usdt/accounts` : `${url}/futures/usdt/accounts`;
             const proxyUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
+            debugLog.className = "debug-box";
+            debugLog.textContent = `Виконується запит...\nURL: ${balanceUrl}`;
+
             try {
                 const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error('Помилка автентифікації або сервера: ' + response.status);
-                const data = await response.json();
+                const rawText = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (e) {
+                    data = { rawResponse: rawText };
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${rawText}`);
+                }
                 
                 if (data && data.total !== undefined) {
                     exchanges[index].balance = data.total;
-                } else if (data && data.available) {
+                    debugLog.className = "debug-box success";
+                    debugLog.textContent = `Успіх!\nВідповідь: ${JSON.stringify(data, null, 2)}`;
+                } else if (data && data.available !== undefined) {
                     exchanges[index].balance = data.available;
+                    debugLog.className = "debug-box success";
+                    debugLog.textContent = `Успіх!\nВідповідь: ${JSON.stringify(data, null, 2)}`;
                 } else {
                     exchanges[index].balance = null;
+                    debugLog.textContent = `Помилка структури відповіді:\n${JSON.stringify(data, null, 2)}`;
                 }
                 updateUI();
             } catch (err) {
                 exchanges[index].balance = null;
+                debugLog.textContent = `Помилка запиту:\n${err.message}`;
                 updateUI();
             }
         }
@@ -302,6 +335,7 @@
             document.getElementById('exModalTitle').textContent = "Додати біржу";
             ['exName','exUrl','exKey','exSecret'].forEach(id => document.getElementById(id).value = "");
             document.getElementById('exDelBtn').classList.add('hidden');
+            document.getElementById('debugContainer').classList.add('hidden');
             document.getElementById('exchangeModal').classList.remove('hidden');
         }
 
@@ -314,6 +348,7 @@
             document.getElementById('exKey').value = ex.key;
             document.getElementById('exSecret').value = ex.secret;
             document.getElementById('exDelBtn').classList.remove('hidden');
+            document.getElementById('debugContainer').classList.add('hidden');
             document.getElementById('exchangeModal').classList.remove('hidden');
             
             if (ex.url && ex.key && ex.secret) {
@@ -333,6 +368,7 @@
 
             const data = { name, url, key, secret, balance: existingBalance };
 
+            const targetIdx = editExIdx !== null ? editExIdx : exchanges.length;
             if (editExIdx !== null) {
                 exchanges[editExIdx] = data;
             } else { 
@@ -340,11 +376,12 @@
                 bots[name] = []; 
             }
             
-            closeExchangeModal(); 
             updateUI();
 
             if (url && key && secret) {
-                fetchExchangeBalance(url, key, secret, editExIdx !== null ? editExIdx : exchanges.length - 1);
+                fetchExchangeBalance(url, key, secret, targetIdx);
+            } else {
+                closeExchangeModal();
             }
         }
 
