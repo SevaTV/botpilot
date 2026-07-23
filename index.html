@@ -52,7 +52,7 @@
         <div id="futuresContent"></div>
     </div>
 
-    <div class="app-version">v1.2.4</div>
+    <div class="app-version">v1.2.5</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -274,7 +274,7 @@
                         const markPrice = pos.mark_price ? Number(pos.mark_price).toFixed(2) : "--";
                         const liqPrice = pos.liq_price ? Number(pos.liq_price).toFixed(2) : "--";
                         
-                        const leverageNum = pos.leverage || 15;
+                        const leverageNum = pos.lever || pos.leverage || 15;
                         const leverage = `${leverageNum}x`;
 
                         const margin = pos.margin ? Number(pos.margin).toFixed(2) : "0.00";
@@ -663,6 +663,10 @@
             document.getElementById('botStatus').value = bot.status;
             document.getElementById('botDelBtn').classList.add('hidden');
             document.getElementById('botModal').classList.remove('hidden');
+        }
+
+        function saveButton() {
+            // ...
         }
 
         function saveBot() {
