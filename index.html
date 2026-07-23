@@ -26,8 +26,12 @@
         .exchange-list { display: flex; flex-direction: column; gap: 8px; }
         .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
+        
         .exchange-balance { font-size: 11px; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px; color: #00ffcc; white-space: nowrap; flex-shrink: 0; }
+        .exchange-balance.empty { background: rgba(255, 85, 85, 0.2); color: #ff5555; border: 1px solid #ff5555; }
         .exchange-chip.active .exchange-balance { background: #000; color: #00ffcc; }
+        .exchange-chip.active .exchange-balance.empty { background: #000; color: #ff5555; border-color: #ff5555; }
+
         .exchange-info { min-width: 0; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 2px; }
         .settings-icon { font-size: 14px; opacity: 0.6; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
 
@@ -79,7 +83,7 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.1.8</div>
+    <div class="app-version">v1.2.0</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -182,12 +186,15 @@
             exchanges.forEach((ex, i) => {
                 const div = document.createElement('div');
                 div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
-                const balanceText = ex.balance !== undefined ? `${ex.balance} USDT` : "0 USDT";
+                
+                const hasBalance = ex.balance !== undefined && ex.balance !== null && ex.balance !== "";
+                const balanceText = hasBalance ? `${ex.balance} USDT` : "N/A";
+                const balanceClass = hasBalance ? "exchange-balance" : "exchange-balance empty";
                 
                 div.innerHTML = `
                     <div class="exchange-info" title="${ex.name}">${ex.name}</div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                        <span class="exchange-balance">${balanceText}</span>
+                        <span class="${balanceClass}">${balanceText}</span>
                         <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>
                     </div>
                 `;
@@ -261,6 +268,35 @@
             }
         }
 
+        async function fetchExchangeBalance(url, key, secret, index) {
+            if (!key || !secret) {
+                exchanges[index].balance = null;
+                updateUI();
+                return;
+            }
+            
+            const balanceUrl = url.endsWith('/') ? `${url}futures/usdt/accounts` : `${url}/futures/usdt/accounts`;
+            const proxyUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error('Помилка автентифікації або сервера: ' + response.status);
+                const data = await response.json();
+                
+                if (data && data.total !== undefined) {
+                    exchanges[index].balance = data.total;
+                } else if (data && data.available) {
+                    exchanges[index].balance = data.available;
+                } else {
+                    exchanges[index].balance = null;
+                }
+                updateUI();
+            } catch (err) {
+                exchanges[index].balance = null;
+                updateUI();
+            }
+        }
+
         function openExchangeModal() {
             editExIdx = null;
             document.getElementById('exModalTitle').textContent = "Додати біржу";
@@ -279,6 +315,10 @@
             document.getElementById('exSecret').value = ex.secret;
             document.getElementById('exDelBtn').classList.remove('hidden');
             document.getElementById('exchangeModal').classList.remove('hidden');
+            
+            if (ex.url && ex.key && ex.secret) {
+                fetchExchangeBalance(ex.url, ex.key, ex.secret, i);
+            }
         }
 
         function saveExchange() {
@@ -289,15 +329,23 @@
 
             if (!name || !url) return alert("Заповніть обов'язкові поля");
             
-            const existingBalance = (editExIdx !== null && exchanges[editExIdx].balance) ? exchanges[editExIdx].balance : 0;
+            let existingBalance = (editExIdx !== null && exchanges[editExIdx].balance !== undefined) ? exchanges[editExIdx].balance : null;
 
             const data = { name, url, key, secret, balance: existingBalance };
 
-            if (editExIdx !== null) exchanges[editExIdx] = data;
-            else { exchanges.push(data); bots[name] = []; }
+            if (editExIdx !== null) {
+                exchanges[editExIdx] = data;
+            } else { 
+                exchanges.push(data); 
+                bots[name] = []; 
+            }
             
             closeExchangeModal(); 
             updateUI();
+
+            if (url && key && secret) {
+                fetchExchangeBalance(url, key, secret, editExIdx !== null ? editExIdx : exchanges.length - 1);
+            }
         }
 
         function deleteExchange() {
