@@ -52,7 +52,7 @@
         <div id="futuresContent"></div>
     </div>
 
-    <div class="app-version">v1.2.6</div>
+    <div class="app-version">v1.2.7</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -282,12 +282,15 @@
                     let urlLog = currentExObj && currentExObj.lastPositionsUrl ? `<br><span style="font-size: 10px; color: #ff8888;">URL: ${currentExObj.lastPositionsUrl}</span>` : "";
                     futuresContent.innerHTML = `<div class="debug-box" style="margin: 0; border-color: #444; color: #aaa;">[ПОЗИЦІЇ] ${errLog}${urlLog}</div>`;
                 } else {
+                    let globalRawResponse = "";
                     currentExObj.positions.forEach(pos => {
+                        if (pos._rawResponse) globalRawResponse = pos._rawResponse;
+                        
                         const card = document.createElement('div');
                         card.className = 'pos-styled';
                         const isLong = Number(pos.size) > 0;
-                        const pnl = pos.unrealised_pnl || pos.pnl || '0.00';
-                        const pnlColor = Number(pnl) >= 0 ? 'color: #22c55e;' : 'color: #ef4444;';
+                        const pnl = Number(pos.unrealised_pnl || pos.pnl || 0);
+                        const pnlColor = pnl >= 0 ? 'color: #22c55e;' : 'color: #ef4444;';
                         
                         const entryPrice = pos.entry_price ? Number(pos.entry_price).toFixed(2) : "--";
                         const markPrice = pos.mark_price ? Number(pos.mark_price).toFixed(2) : "--";
@@ -296,10 +299,18 @@
                         const leverageNum = pos.lever || pos.leverage || 15;
                         const leverage = `${leverageNum}x`;
 
-                        const margin = pos.margin ? Number(pos.margin).toFixed(2) : "0.00";
-                        const size = pos.size ? Math.abs(Number(pos.size)).toFixed(2) : "0.00";
+                        const marginNum = Number(pos.initial_margin || pos.margin || 0);
+                        const margin = marginNum.toFixed(2);
+                        
+                        const sizeValue = Number(pos.value || pos.size || 0);
+                        const size = Math.abs(sizeValue).toFixed(2);
 
-                        const rawResponseText = pos._rawResponse || JSON.stringify(pos, null, 2);
+                        let roi = 0;
+                        if (marginNum > 0) {
+                            roi = (pnl / marginNum) * 100;
+                        }
+                        const roiFormatted = `${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%`;
+                        const roiColor = roi >= 0 ? 'color: #22c55e;' : 'color: #ef4444;';
 
                         card.innerHTML = `
                             <div class="pos-header">
@@ -309,13 +320,13 @@
                                     <span class="pos-badge-tag pos-cross-tag">Крос</span>
                                     <span class="pos-leverage">${leverage}</span>
                                 </div>
-                                <div style="font-size: 11px; color: #888;">ROI <span style="color: #22c55e; font-weight: bold;">+20,70%</span></div>
+                                <div style="font-size: 11px; color: #888;">ROI <span style="${roiColor} font-weight: bold;">${roiFormatted}</span></div>
                             </div>
                             
                             <div class="pos-stats-grid">
                                 <div class="pos-stat-box">
                                     <div class="pos-stat-label">Нереалізований PnL (USDT)</div>
-                                    <div class="pos-stat-value big" style="${pnlColor}">${Number(pnl).toFixed(2)} <span style="font-size: 11px; font-weight: normal; color: #888;">≈$${Number(pnl).toFixed(2)}</span></div>
+                                    <div class="pos-stat-value big" style="${pnlColor}">${pnl.toFixed(2)} <span style="font-size: 11px; font-weight: normal; color: #888;">≈$${pnl.toFixed(2)}</span></div>
                                 </div>
                                 <div class="pos-stat-box pos-stat-right">
                                     <div class="pos-stat-label">Розмір (USDT)</div>
@@ -345,14 +356,20 @@
                                 <button class="btn-cancel" onclick="openTpSlModal('${pos.contract}')">ТП/СЛ</button>
                                 <button class="btn-save" onclick="closePosition('${pos.contract}')">Закрити</button>
                             </div>
-
-                            <div class="pos-method-log">
-                                <div class="pos-method-log-title">Лог відповіді метода:</div>
-                                <pre>${escapeHtml(rawResponseText)}</pre>
-                            </div>
                         `;
                         futuresContent.appendChild(card);
                     });
+
+                    if (globalRawResponse) {
+                        const logDiv = document.createElement('div');
+                        logDiv.className = 'pos-method-log';
+                        logDiv.style.marginTop = '15px';
+                        logDiv.innerHTML = `
+                            <div class="pos-method-log-title">Загальний лог відповіді методу:</div>
+                            <pre>${escapeHtml(globalRawResponse)}</pre>
+                        `;
+                        futuresContent.appendChild(logDiv);
+                    }
                 }
             } else if (activeFuturesTab === 'orders') {
                 if (!selectedContract) {
