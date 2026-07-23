@@ -24,8 +24,10 @@
         .hidden { display: none; }
         
         .exchange-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+        .exchange-chip { background: #2a2a2a; border: 1px solid #444; padding: 8px 14px; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 14px; display: flex; align-items: center; gap: 8px; }
         .exchange-chip.active { background: #00ffcc; color: #000; border-color: #00ffcc; font-weight: bold; }
+        .exchange-balance { font-size: 11px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #00ffcc; }
+        .exchange-chip.active .exchange-balance { background: #000; color: #00ffcc; }
         .settings-icon { font-size: 12px; opacity: 0.6; cursor: pointer; }
 
         .bot-card { background: #2a2a2a; padding: 10px 12px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -76,7 +78,7 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.1.3</div>
+    <div class="app-version">v1.1.4</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -179,7 +181,8 @@
             exchanges.forEach((ex, i) => {
                 const div = document.createElement('div');
                 div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
-                div.innerHTML = `${ex.name} <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>`;
+                const balanceText = ex.balance !== undefined ? `${ex.balance} USDT` : "0 USDT";
+                div.innerHTML = `${ex.name} <span class="exchange-balance">${balanceText}</span> <span class="settings-icon" onclick="event.stopPropagation(); openEditEx(${i})">⚙️</span>`;
                 div.onclick = () => { 
                     activeEx = (activeEx === ex.name) ? null : ex.name; 
                     updateUI(); 
@@ -270,16 +273,22 @@
         }
 
         function saveExchange() {
-            const data = { 
-                name: document.getElementById('exName').value.trim(), 
-                url: document.getElementById('exUrl').value.trim(),
-                key: document.getElementById('exKey').value.trim(),
-                secret: document.getElementById('exSecret').value.trim()
-            };
-            if (!data.name || !data.url) return alert("Заповніть обов'язкові поля");
+            const name = document.getElementById('exName').value.trim();
+            const url = document.getElementById('exUrl').value.trim();
+            const key = document.getElementById('exKey').value.trim();
+            const secret = document.getElementById('exSecret').value.trim();
+
+            if (!name || !url) return alert("Заповніть обов'язкові поля");
+            
+            const existingBalance = (editExIdx !== null && exchanges[editExIdx].balance) ? exchanges[editExIdx].balance : 0;
+
+            const data = { name, url, key, secret, balance: existingBalance };
+
             if (editExIdx !== null) exchanges[editExIdx] = data;
-            else { exchanges.push(data); bots[data.name] = []; }
-            closeExchangeModal(); updateUI();
+            else { exchanges.push(data); bots[name] = []; }
+            
+            closeExchangeModal(); 
+            updateUI();
         }
 
         function deleteExchange() {
