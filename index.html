@@ -52,7 +52,7 @@
         <div id="futuresContent"></div>
     </div>
 
-    <div class="app-version">v1.2.5</div>
+    <div class="app-version">v1.2.6</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -133,6 +133,7 @@
         let fullApiUrl = localStorage.getItem('bp_full_url') || "https://api.gateio.ws/api/v4/futures/usdt/contracts/XAG_USDT";
         let editExIdx = null;
         let editBotIdx = null;
+        let autoRefreshInterval = null;
 
         document.getElementById('apiFullUrlInput').value = fullApiUrl;
         document.getElementById('priceDisplay').textContent = lastPriceValue;
@@ -175,6 +176,23 @@
             updateUI();
         }
 
+        function setupAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+
+            if (activeEx) {
+                autoRefreshInterval = setInterval(() => {
+                    const exObj = exchanges.find(e => e.name === activeEx);
+                    if (exObj && exObj.url && exObj.key && exObj.secret) {
+                        const exIdx = exchanges.indexOf(exObj);
+                        fetchExchangeData(exObj.url, exObj.key, exObj.secret, exIdx, true);
+                    }
+                }, 10000);
+            }
+        }
+
         function updateUI() {
             localStorage.setItem('bp_ex', JSON.stringify(exchanges));
             localStorage.setItem('bp_bots', JSON.stringify(bots));
@@ -206,6 +224,7 @@
                 
                 div.onclick = () => { 
                     activeEx = (activeEx === ex.name) ? null : ex.name; 
+                    setupAutoRefresh();
                     updateUI(); 
                 };
                 exList.appendChild(div);
@@ -424,18 +443,23 @@
             }
         }
 
-        async function fetchExchangeData(url, key, secret, index) {
+        async function fetchExchangeData(url, key, secret, index, isSilent = false) {
             const debugContainer = document.getElementById('debugContainer');
             const debugLog = document.getElementById('exDebugLog');
-            debugContainer.classList.remove('hidden');
+            
+            if (!isSilent) {
+                debugContainer.classList.remove('hidden');
+            }
 
             if (!key || !secret) {
                 exchanges[index].balance = null;
                 exchanges[index].orders = [];
                 exchanges[index].positions = [];
                 exchanges[index].history = [];
-                debugLog.className = "debug-box";
-                debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
+                if (!isSilent) {
+                    debugLog.className = "debug-box";
+                    debugLog.textContent = "Помилка: Не вказано API Key або Secret Key.";
+                }
                 updateUI();
                 return;
             }
@@ -449,8 +473,10 @@
 
             exchanges[index].lastHistoryUrl = historyUrl;
 
-            debugLog.className = "debug-box";
-            debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nОтримання даних ф'ючерсів...`;
+            if (!isSilent) {
+                debugLog.className = "debug-box";
+                debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nОтримання даних ф'ючерсів...`;
+            }
 
             try {
                 let requests = [fetch(proxyBalanceUrl), fetch(proxyHistoryUrl)];
@@ -540,8 +566,10 @@
                     exchanges[index].lastOrdersError = "Контракт не вибрано";
                 }
 
-                debugLog.className = "debug-box success";
-                debugLog.textContent = `[УСПІХ]\nБаланс: ${exchanges[index].balance}\nПозицій: ${exchanges[index].positions.length}\nОрдерів: ${exchanges[index].orders.length}`;
+                if (!isSilent) {
+                    debugLog.className = "debug-box success";
+                    debugLog.textContent = `[УСПІХ]\nБаланс: ${exchanges[index].balance}\nПозицій: ${exchanges[index].positions.length}\nОрдерів: ${exchanges[index].orders.length}`;
+                }
                 updateUI();
             } catch (err) {
                 exchanges[index].balance = null;
@@ -550,7 +578,9 @@
                 exchanges[index].history = [];
                 exchanges[index].lastPositionsError = `Error: ${err.message}`;
                 exchanges[index].lastOrdersError = `Error: ${err.message}`;
-                debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nError: ${err.message}`;
+                if (!isSilent) {
+                    debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nError: ${err.message}`;
+                }
                 updateUI();
             }
         }
@@ -640,7 +670,9 @@
             exchanges.splice(editExIdx, 1);
             delete bots[name];
             activeEx = null;
-            closeExchangeModal(); updateUI();
+            setupAutoRefresh();
+            closeExchangeModal(); 
+            updateUI();
         }
 
         function closeExchangeModal() { document.getElementById('exchangeModal').classList.add('hidden'); }
@@ -657,16 +689,13 @@
         function openEditBot(exName, i) {
             editBotIdx = i;
             activeEx = exName;
+            setupAutoRefresh();
             const bot = bots[exName][i];
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
             document.getElementById('botDelBtn').classList.add('hidden');
             document.getElementById('botModal').classList.remove('hidden');
-        }
-
-        function saveButton() {
-            // ...
         }
 
         function saveBot() {
@@ -693,6 +722,7 @@
 
         function closeBotModal() { document.getElementById('botModal').classList.add('hidden'); }
 
+        setupAutoRefresh();
         updateUI();
     </script>
 </body>
