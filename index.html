@@ -47,7 +47,7 @@
         .form-group label { display: block; font-size: 12px; color: #aaa; margin-bottom: 4px; }
         .form-group input, .form-group select { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; outline: none; }
         
-        .debug-box { background: #111; border: 1px solid #ff5555; padding: 8px; border-radius: 6px; font-size: 11px; color: #ff8888; margin-top: 10px; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow-y: auto; }
+        .debug-box { background: #111; border: 1px solid #ff5555; padding: 8px; border-radius: 6px; font-size: 11px; color: #ff8888; margin-top: 10px; white-space: pre-wrap; word-break: break-all; max-height: 140px; overflow-y: auto; }
         .debug-box.success { border-color: #00ffcc; color: #00ffcc; }
 
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
@@ -86,7 +86,7 @@
         <div id="botList"></div>
     </div>
 
-    <div class="app-version">v1.2.1</div>
+    <div class="app-version">v1.2.2</div>
 
     <div id="pairConfigModal" class="modal hidden">
         <div class="modal-content">
@@ -293,7 +293,7 @@
             const proxyUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
             debugLog.className = "debug-box";
-            debugLog.textContent = `Виконується запит...\nURL: ${balanceUrl}`;
+            debugLog.textContent = `[ВИКОНУЄТЬСЯ ЗАПИТ]\nMethod: GET\nProxy URL: ${proxyUrl}\nTarget URL: ${balanceUrl}`;
 
             try {
                 const response = await fetch(proxyUrl);
@@ -313,19 +313,19 @@
                 if (data && data.total !== undefined) {
                     exchanges[index].balance = data.total;
                     debugLog.className = "debug-box success";
-                    debugLog.textContent = `Успіх!\nВідповідь: ${JSON.stringify(data, null, 2)}`;
+                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
                 } else if (data && data.available !== undefined) {
                     exchanges[index].balance = data.available;
                     debugLog.className = "debug-box success";
-                    debugLog.textContent = `Успіх!\nВідповідь: ${JSON.stringify(data, null, 2)}`;
+                    debugLog.textContent = `[УСПІХ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
                 } else {
                     exchanges[index].balance = null;
-                    debugLog.textContent = `Помилка структури відповіді:\n${JSON.stringify(data, null, 2)}`;
+                    debugLog.textContent = `[ПОМИЛКА СТРУКТУРИ]\nRequest URL: ${proxyUrl}\nResponse:\n${JSON.stringify(data, null, 2)}`;
                 }
                 updateUI();
             } catch (err) {
                 exchanges[index].balance = null;
-                debugLog.textContent = `Помилка запиту:\n${err.message}`;
+                debugLog.textContent = `[ПОМИЛКА ЗАПИТУ]\nRequest URL: ${proxyUrl}\nError: ${err.message}`;
                 updateUI();
             }
         }
@@ -411,7 +411,7 @@
             document.getElementById('botModalTitle').textContent = "Налаштування бота";
             document.getElementById('botName').value = bot.name;
             document.getElementById('botStatus').value = bot.status;
-            document.getElementById('botDelBtn').classList.remove('hidden');
+            document.getElementById('botDelBtn').classList.add('hidden');
             document.getElementById('botModal').classList.remove('hidden');
         }
 
