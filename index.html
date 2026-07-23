@@ -215,7 +215,6 @@
             document.getElementById('futuresExchangeLabel').textContent = activeEx ? `(${activeEx})` : "";
             document.getElementById('botAddBtn').classList.toggle('hidden', !activeEx);
             
-            // Рендер ботів
             const botList = document.getElementById('botList');
             botList.innerHTML = '';
             
@@ -246,7 +245,6 @@
                 });
             }
 
-            // Рендер модуля Ф'ючерси
             const futuresContent = document.getElementById('futuresContent');
             futuresContent.innerHTML = '';
 
@@ -275,16 +273,19 @@
                         const entryPrice = pos.entry_price ? Number(pos.entry_price).toFixed(2) : "--";
                         const markPrice = pos.mark_price ? Number(pos.mark_price).toFixed(2) : "--";
                         const liqPrice = pos.liq_price ? Number(pos.liq_price).toFixed(2) : "--";
-                        const leverage = pos.leverage ? `${pos.leverage}x` : "15x";
-                        const margin = pos.margin ? Number(pos.margin).toFixed(2) : "2.44";
-                        const size = pos.size ? Math.abs(Number(pos.size)).toFixed(2) : "36.18";
+                        
+                        const leverageNum = pos.leverage || 15;
+                        const leverage = `${leverageNum}x`;
+
+                        const margin = pos.margin ? Number(pos.margin).toFixed(2) : "0.00";
+                        const size = pos.size ? Math.abs(Number(pos.size)).toFixed(2) : "0.00";
 
                         card.innerHTML = `
                             <div class="pos-header">
                                 <div class="pos-header-left">
                                     <strong>${pos.contract || selectedContract}</strong>
-                                    <span class="${isLong ? 'badge-long' : 'badge-short'}">${isLong ? 'Лонг' : 'Шорт'}</span>
-                                    <span style="font-size: 12px; color: #aaa;">Крос</span>
+                                    <span class="${isLong ? 'badge-long' : 'badge-short'} pos-badge-tag">${isLong ? 'Лонг' : 'Шорт'}</span>
+                                    <span class="pos-badge-tag pos-cross-tag">Крос</span>
                                     <span class="pos-leverage">${leverage}</span>
                                 </div>
                                 <div style="font-size: 11px; color: #888;">ROI <span style="color: #22c55e; font-weight: bold;">+20,70%</span></div>
