@@ -246,7 +246,7 @@
                 });
             }
 
-            // Рендер модуля Ф'ючерси (відповідно до активної вкладки)
+            // Рендер модуля Ф'ючерси
             const futuresContent = document.getElementById('futuresContent');
             futuresContent.innerHTML = '';
 
@@ -258,18 +258,20 @@
             const currentExObj = exchanges.find(e => e.name === activeEx);
 
             if (activeFuturesTab === 'positions') {
-                if (!currentExObj || !currentExObj.positions || currentExObj.positions.length === 0) {
+                if (!selectedContract) {
+                    futuresContent.innerHTML = '<div class="empty-text">Виберіть контракт для перегляду позицій</div>';
+                } else if (!currentExObj || !currentExObj.positions || currentExObj.positions.length === 0) {
                     futuresContent.innerHTML = '<div class="empty-text">Активні позиції відсутні</div>';
                 } else {
                     currentExObj.positions.forEach(pos => {
                         const card = document.createElement('div');
                         card.className = 'futures-card';
-                        const isLong = pos.size > 0;
+                        const isLong = Number(pos.size) > 0;
                         card.innerHTML = `
                             <div>
-                                <strong>${pos.contract}</strong>
+                                <strong>${pos.contract || selectedContract}</strong>
                                 <span class="${isLong ? 'badge-long' : 'badge-short'}">${isLong ? 'LONG' : 'SHORT'} | Розмір: ${pos.size}</span>
-                                <span>Вхід: ${pos.entry_price} | Марка: ${pos.mark_price || '--'} | PnL: ${pos.pnl || '0'} USDT</span>
+                                <span>Вхід: ${pos.entry_price || '--'} | Марка: ${pos.mark_price || '--'} | PnL: ${pos.unrealised_pnl || pos.pnl || '0'} USDT</span>
                             </div>
                             <button class="btn-small">Закрити</button>
                         `;
@@ -370,34 +372,35 @@
             
             const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
             const balanceUrl = `${cleanUrl}/futures/usdt/accounts`;
-            const positionsUrl = `${cleanUrl}/futures/usdt/positions`;
             const historyUrl = `${cleanUrl}/futures/usdt/orders?status=finished`;
 
             const proxyBalanceUrl = `/api/proxy-auth?url=${encodeURIComponent(balanceUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
-            const proxyPositionsUrl = `/api/proxy-auth?url=${encodeURIComponent(positionsUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
             const proxyHistoryUrl = `/api/proxy-auth?url=${encodeURIComponent(historyUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
 
             debugLog.className = "debug-box";
             debugLog.textContent = `[ВИКОНУЮТЬСЯ ЗАПИТИ]\nОтримання даних ф'ючерсів...`;
 
             try {
-                let requests = [fetch(proxyBalanceUrl), fetch(proxyPositionsUrl), fetch(proxyHistoryUrl)];
+                let requests = [fetch(proxyBalanceUrl), fetch(proxyHistoryUrl)];
                 
                 if (selectedContract) {
+                    const positionsUrl = `${cleanUrl}/futures/usdt/positions/${selectedContract}`;
                     const ordersUrl = `${cleanUrl}/futures/usdt/orders?status=open&contract=${selectedContract}`;
+                    
+                    const proxyPositionsUrl = `/api/proxy-auth?url=${encodeURIComponent(positionsUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
                     const proxyOrdersUrl = `/api/proxy-auth?url=${encodeURIComponent(ordersUrl)}&key=${encodeURIComponent(key)}&secret=${encodeURIComponent(secret)}`;
+                    
+                    requests.push(fetch(proxyPositionsUrl));
                     requests.push(fetch(proxyOrdersUrl));
                 }
 
                 const responses = await Promise.all(requests);
                 
                 const balRaw = await responses[0].text();
-                const posRaw = await responses[1].text();
-                const histRaw = await responses[2].text();
+                const histRaw = await responses[1].text();
 
-                let balData, posData, histData;
+                let balData, histData;
                 try { balData = JSON.parse(balRaw); } catch(e) { balData = {}; }
-                try { posData = JSON.parse(posRaw); } catch(e) { posData = []; }
                 try { histData = JSON.parse(histRaw); } catch(e) { histData = []; }
 
                 if (balData && balData.total !== undefined) {
@@ -408,9 +411,26 @@
                     exchanges[index].balance = null;
                 }
 
-                exchanges[index].positions = Array.isArray(posData) ? posData.filter(p => Number(p.size) !== 0) : [];
                 exchanges[index].history = Array.isArray(histData) ? histData : [];
 
+                // Позиції (якщо вибрано контракт, відповідь може бути об'єктом або масивом)
+                if (responses.length > 2) {
+                    const posRaw = await responses[2].text();
+                    let posData;
+                    try { posData = JSON.parse(posRaw); } catch(e) { posData = null; }
+                    
+                    if (posData && !Array.isArray(posData)) {
+                        exchanges[index].positions = Number(posData.size) !== 0 ? [posData] : [];
+                    } else if (Array.isArray(posData)) {
+                        exchanges[index].positions = posData.filter(p => Number(p.size) !== 0);
+                    } else {
+                        exchanges[index].positions = [];
+                    }
+                } else {
+                    exchanges[index].positions = [];
+                }
+
+                // Ордери
                 if (responses.length > 3) {
                     const ordRaw = await responses[3].text();
                     let ordData;
