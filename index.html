@@ -280,11 +280,13 @@
                         const margin = pos.margin ? Number(pos.margin).toFixed(2) : "0.00";
                         const size = pos.size ? Math.abs(Number(pos.size)).toFixed(2) : "0.00";
 
+                        const rawResponseText = pos._rawResponse || JSON.stringify(pos, null, 2);
+
                         card.innerHTML = `
                             <div class="pos-header">
                                 <div class="pos-header-left">
                                     <strong>${pos.contract || selectedContract}</strong>
-                                    <span class="${isLong ? 'badge-long' : 'badge-short'} pos-badge-tag">${isLong ? 'Лонг' : 'Шорт'}</span>
+                                    <span class="${isLong ? 'badge-long' : 'badge-short'} pos-badge-tag">${isLong ? 'Шорт' : 'Лонг'}</span>
                                     <span class="pos-badge-tag pos-cross-tag">Крос</span>
                                     <span class="pos-leverage">${leverage}</span>
                                 </div>
@@ -323,6 +325,11 @@
                             <div class="pos-actions">
                                 <button class="btn-cancel" onclick="openTpSlModal('${pos.contract}')">ТП/СЛ</button>
                                 <button class="btn-save" onclick="closePosition('${pos.contract}')">Закрити</button>
+                            </div>
+
+                            <div class="pos-method-log">
+                                <div class="pos-method-log-title">Лог відповіді метода:</div>
+                                <pre>${escapeHtml(rawResponseText)}</pre>
                             </div>
                         `;
                         futuresContent.appendChild(card);
@@ -378,6 +385,15 @@
                     });
                 }
             }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function openPairConfigModal() { document.getElementById('pairConfigModal').classList.remove('hidden'); }
@@ -488,10 +504,14 @@
                         exchanges[index].lastPositionsError = `HTTP ${posRes.status}: ${posRaw}`;
                         exchanges[index].positions = [];
                     } else if (posData && !Array.isArray(posData)) {
+                        posData._rawResponse = posRaw;
                         exchanges[index].positions = Number(posData.size) !== 0 ? [posData] : [];
                         exchanges[index].lastPositionsError = exchanges[index].positions.length === 0 ? "Позиція за цим контрактом має нульовий розмір" : null;
                     } else if (Array.isArray(posData)) {
-                        exchanges[index].positions = posData.filter(p => Number(p.size) !== 0);
+                        exchanges[index].positions = posData.filter(p => Number(p.size) !== 0).map(p => {
+                            p._rawResponse = posRaw;
+                            return p;
+                        });
                         exchanges[index].lastPositionsError = exchanges[index].positions.length === 0 ? "Активні позиції відсутні" : null;
                     } else {
                         exchanges[index].positions = [];
