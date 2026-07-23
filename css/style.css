@@ -183,11 +183,11 @@ h1 {
     margin-top: 2px; 
 }
 
-/* Стилізована картка позиції (у стилі термінала) */
+/* Оновлені стилі картки позиції */
 .pos-styled {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     background: #2a2a2a;
     border: 1px solid #444;
     border-radius: 8px;
@@ -203,10 +203,16 @@ h1 {
     padding-bottom: 8px;
 }
 
+.pos-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .pos-leverage {
     font-size: 11px;
     background: #1e1e1e;
-    color: #00ffcc;
+    color: #ccc;
     padding: 2px 6px;
     border-radius: 4px;
     border: 1px solid #444;
@@ -214,9 +220,8 @@ h1 {
 
 .pos-stats-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    font-size: 11px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .pos-stat-box {
@@ -226,27 +231,38 @@ h1 {
 }
 
 .pos-stat-label {
+    font-size: 11px;
     color: #888;
 }
 
 .pos-stat-value {
+    font-size: 13px;
     color: #fff;
     font-weight: 600;
 }
 
 .pos-stat-value.big {
-    font-size: 14px;
+    font-size: 15px;
 }
 
-.pnl-pct {
-    font-size: 11px;
-    font-weight: normal;
+.pos-stat-right {
+    text-align: right;
 }
 
 .pos-actions {
     display: flex;
     gap: 8px;
     margin-top: 4px;
+}
+
+.pos-actions button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    border: none;
 }
 
 .empty-text { 
@@ -256,7 +272,6 @@ h1 {
     padding: 10px; 
 }
 
-/* Вкладки та елементи керування ф'ючерсами */
 .futures-tabs {
     display: flex;
     gap: 6px;
