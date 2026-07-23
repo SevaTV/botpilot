@@ -143,7 +143,7 @@
                 div.className = `exchange-chip ${activeEx === ex.name ? 'active' : ''}`;
                 
                 const hasBalance = ex.balance !== undefined && ex.balance !== null && ex.balance !== "";
-                const balanceText = hasBalance ? `${ex.balance} USDT` : "N/A";
+                const balanceText = hasBalance ? `${Number(ex.balance).toFixed(4)} USDT` : "N/A";
                 const balanceClass = hasBalance ? "exchange-balance" : "exchange-balance empty";
                 
                 div.innerHTML = `
