@@ -213,13 +213,14 @@ h1 {
     font-size: 14px;
 }
 
+/* Зменшені міні-бейджи (в половину висоти напису) з рамками */
 .pos-badge-tag {
-    font-size: 10px;
-    padding: 2px 5px;
-    border-radius: 4px;
+    font-size: 8.5px;
+    padding: 1px 4px;
+    border-radius: 3px;
     border: 1px solid #444;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1;
 }
 
 .badge-long {
@@ -240,13 +241,14 @@ h1 {
 }
 
 .pos-leverage {
-    font-size: 10px;
+    font-size: 8.5px;
     background: #1e1e1e;
     color: #00ffcc;
-    padding: 2px 5px;
-    border-radius: 4px;
+    padding: 1px 4px;
+    border-radius: 3px;
     border: 1px solid #444;
     font-weight: 600;
+    line-height: 1;
 }
 
 .pos-stats-grid {
